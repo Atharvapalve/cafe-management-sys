@@ -1,0 +1,2159 @@
+PROJECT EXPORT
+
+PROJECT STRUCTURE:
+
+📁 backend
+  📁 middleware
+    📄 auth.js
+    📄 validate.js
+  📁 models
+    📄 MenuItem.js
+    📄 Order.js
+    📄 User.js
+  📁 routes
+    📄 auth.js
+    📄 menu.js
+    📄 orders.js
+    📄 users.js
+  📁 tests
+    📄 auth.test.js
+  📄 .env
+  📄 index.js
+  📄 package.json
+  📄 vercel.json
+📁 frontend1
+  📁 app
+    📄 app.tsx
+    📄 globals.css
+    📄 layout.tsx
+    📄 page.tsx
+  📁 components
+    📁 auth
+    📁 cart
+      📄 cart-modal.tsx
+      📄 success-modal.tsx
+    📁 menu
+      📄 menu-grid.tsx
+    📁 orders
+      📄 order-history.tsx
+    📁 profile
+      📄 profile-card.tsx
+    📁 ui
+      📄 button.tsx
+      📄 card.tsx
+      📄 input.tsx
+      📄 select.tsx
+    📁 wallet
+      📄 wallet-card.tsx
+  📁 contexts
+    📄 auth-context.tsx
+  📁 lib
+    📄 api.ts
+    📄 utils.ts
+  📁 public
+    📄 file.svg
+    📄 globe.svg
+    📄 next.svg
+    📄 vercel.svg
+    📄 window.svg
+  📄 .env.local
+  📄 .gitignore
+  📄 eslint.config.mjs
+  📄 next-env.d.ts
+  📄 next.config.js
+  📄 package.json
+  📄 postcss.config.js
+  📄 README.md
+  📄 tailwind.config.js
+  📄 tsconfig.json
+📄 package.json
+
+FILES:
+
+=== backend\.env ===
+
+PORT=5000
+MONGO_URI=mongodb+srv://atharvapalve10:atharvapalve@cluster0.as2jc.mongodb.net/CafeManagementSystem?retryWrites=true&w=majority&appName=Cluster0
+JWT_SECRET=a61d16f98a8ec5af8ca3d5fdc81bdaee4c42c2b5c87aa1d1cc16c0423e242062
+FRONTEND_URL=http://localhost:3000
+
+
+========================================
+
+=== backend\index.js ===
+
+import express from "express";
+import cors from "cors";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import authRoutes from "./routes/auth.js";
+import menuRoutes from "./routes/menu.js";
+import orderRoutes from "./routes/orders.js";
+import userRoutes from "./routes/users.js";
+
+// Load environment variables
+dotenv.config();
+
+const app = express();
+
+// Middleware
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:3000", // Allow frontend
+    credentials: true, // Allow cookies to be sent
+  })
+);
+
+app.use(express.json());
+
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/menu", menuRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/users", userRoutes);
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  });
+});
+
+// MongoDB Connection
+mongoose
+  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+
+========================================
+
+=== backend\middleware\auth.js ===
+
+import jwt from "jsonwebtoken";
+
+export const auth = (req, res, next) => {
+  const token = req.header("Authorization")?.replace("Bearer ", "");
+
+  if (!token) {
+    return res.status(401).json({ message: "No token, authorization denied" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: "Token is not valid" });
+  }
+};
+
+
+========================================
+
+=== backend\middleware\validate.js ===
+
+import { validationResult } from "express-validator"
+
+export const validate = (validations) => {
+  return async (req, res, next) => {
+    await Promise.all(validations.map((validation) => validation.run(req)))
+
+    const errors = validationResult(req)
+    if (errors.isEmpty()) {
+      return next()
+    }
+
+    res.status(400).json({ errors: errors.array() })
+  }
+}
+
+
+
+========================================
+
+=== backend\models\MenuItem.js ===
+
+import mongoose from "mongoose"
+
+const menuItemSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+  category: {
+    type: String,
+    required: true,
+    enum: ["Beverages", "Snacks", "Desserts"],
+  },
+  rewardPoints: {
+    type: Number,
+    required: true,
+  },
+  description: String,
+  image: String,
+  available: {
+    type: Boolean,
+    default: true,
+  },
+})
+
+export default mongoose.model("MenuItem", menuItemSchema)
+
+
+
+========================================
+
+=== backend\models\Order.js ===
+
+import mongoose from "mongoose"
+
+const orderSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  items: [
+    {
+      menuItem: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "MenuItem",
+        required: true,
+      },
+      quantity: {
+        type: Number,
+        required: true,
+      },
+      price: {
+        type: Number,
+        required: true,
+      },
+    },
+  ],
+  subtotal: {
+    type: Number,
+    required: true,
+  },
+  rewardPointsRedeemed: {
+    type: Number,
+    default: 0,
+  },
+  rewardPointsEarned: {
+    type: Number,
+    required: true,
+  },
+  total: {
+    type: Number,
+    required: true,
+  },
+  status: {
+    type: String,
+    enum: ["pending", "preparing", "completed", "cancelled"],
+    default: "pending",
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+})
+
+export default mongoose.model("Order", orderSchema)
+
+
+
+========================================
+
+=== backend\models\User.js ===
+
+import mongoose from "mongoose"
+import bcrypt from "bcryptjs"
+
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  phone: String,
+  memberSince: {
+    type: Date,
+    default: Date.now,
+  },
+  preferences: {
+    favoriteCoffee: String,
+    preferredMilk: String,
+    rewardsTier: {
+      type: String,
+      enum: ["Bronze", "Silver", "Gold"],
+      default: "Bronze",
+    },
+  },
+  wallet: {
+    balance: {
+      type: Number,
+      default: 0,
+    },
+    rewardPoints: {
+      type: Number,
+      default: 0,
+    },
+  },
+})
+
+userSchema.pre("save", async function (next) {
+  if (this.isModified("password")) {
+    this.password = await bcrypt.hash(this.password, 10)
+  }
+  next()
+})
+
+export default mongoose.model("User", userSchema)
+
+
+
+========================================
+
+=== backend\package.json ===
+
+{
+  "name": "cafe-management-backend",
+  "version": "1.0.0",
+  "description": "Backend for Cafe Management System",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^7.0.3"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.21.4",
+    "jest": "^29.5.0",
+    "nodemon": "^3.1.9",
+    "supertest": "^6.3.3"
+  }
+}
+
+
+========================================
+
+=== backend\routes\auth.js ===
+
+import express from "express"
+import bcrypt from "bcryptjs"
+import jwt from "jsonwebtoken"
+import { body } from "express-validator"
+import User from "../models/User.js"
+import { validate } from "../middleware/validate.js"
+
+const router = express.Router()
+
+router.post(
+  "/register",
+  validate([
+    body("name").notEmpty().withMessage("Name is required"),
+    body("email").isEmail().withMessage("Invalid email"),
+    body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters long"),
+  ]),
+  async (req, res) => {
+    // ... (rest of the registration logic)
+  },
+)
+
+router.post(
+  "/login",
+  validate([
+    body("email").isEmail().withMessage("Invalid email"),
+    body("password").notEmpty().withMessage("Password is required"),
+  ]),
+  async (req, res) => {
+    // ... (rest of the login logic)
+  },
+)
+
+export default router
+
+
+
+========================================
+
+=== backend\routes\menu.js ===
+
+import express from "express";
+import MenuItem from "../models/MenuItem.js";
+import { auth } from "../middleware/auth.js";
+
+const router = express.Router();
+
+// Get all menu items
+router.get("/", async (req, res) => {
+  try {
+    const menuItems = await MenuItem.find({ available: true });
+    res.json(menuItems);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Add a new menu item (admin only)
+router.post("/", auth, async (req, res) => {
+  try {
+    const { name, price, category, rewardPoints, description, image } = req.body;
+    const menuItem = new MenuItem({
+      name,
+      price,
+      category,
+      rewardPoints,
+      description,
+      image,
+    });
+    await menuItem.save();
+    res.status(201).json(menuItem);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Update a menu item (admin only)
+router.put("/:id", auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, price, category, rewardPoints, description, image, available } = req.body;
+    const menuItem = await MenuItem.findByIdAndUpdate(
+      id,
+      {
+        name,
+        price,
+        category,
+        rewardPoints,
+        description,
+        image,
+        available,
+      },
+      { new: true }
+    );
+    if (!menuItem) {
+      return res.status(404).json({ message: "Menu item not found" });
+    }
+    res.json(menuItem);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+export default router;
+
+
+========================================
+
+=== backend\routes\orders.js ===
+
+import express from "express"
+import Order from "../models/Order.js"
+import User from "../models/User.js"
+import MenuItem from "../models/MenuItem.js"
+import { auth } from "../middleware/auth.js"
+
+const router = express.Router()
+
+// Create a new order
+router.post("/", auth, async (req, res) => {
+  try {
+    const { items, rewardPointsRedeemed } = req.body
+    const user = await User.findById(req.user.userId)
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" })
+    }
+
+    // Validate and fetch menu items
+    const menuItemIds = items.map((item) => item.menuItemId)
+    const menuItems = await MenuItem.find({ _id: { $in: menuItemIds } })
+
+    if (menuItems.length !== menuItemIds.length) {
+      return res.status(400).json({ message: "One or more menu items are invalid" })
+    }
+
+    // Calculate totals
+    const subtotal = items.reduce((sum, item) => {
+      const menuItem = menuItems.find((mi) => mi._id.toString() === item.menuItemId)
+      return sum + menuItem.price * item.quantity
+    }, 0)
+
+    const rewardPointsValue = rewardPointsRedeemed * 0.5
+    const total = Math.max(0, subtotal - rewardPointsValue)
+
+    // Verify user has enough balance and points
+    if (user.wallet.balance < total) {
+      return res.status(400).json({ message: "Insufficient balance" })
+    }
+    if (user.wallet.rewardPoints < rewardPointsRedeemed) {
+      return res.status(400).json({ message: "Insufficient reward points" })
+    }
+
+    // Calculate earned points (10% of total spent)
+    const rewardPointsEarned = Math.floor(total * 0.1)
+
+    // Create order
+    const order = new Order({
+      user: req.user.userId,
+      items: items.map((item) => ({
+        menuItem: item.menuItemId,
+        quantity: item.quantity,
+        price: menuItems.find((mi) => mi._id.toString() === item.menuItemId).price,
+      })),
+      subtotal,
+      rewardPointsRedeemed,
+      rewardPointsEarned,
+      total,
+    })
+
+    await order.save()
+
+    // Update user wallet
+    user.wallet.balance -= total
+    user.wallet.rewardPoints = user.wallet.rewardPoints - rewardPointsRedeemed + rewardPointsEarned
+    await user.save()
+
+    res.status(201).json({
+      order,
+      wallet: user.wallet,
+    })
+  } catch (error) {
+    console.error("Error creating order:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Get order history for the authenticated user
+router.get("/history", auth, async (req, res) => {
+  try {
+    const orders = await Order.find({ user: req.user.userId })
+      .sort({ createdAt: -1 })
+      .populate("items.menuItem", "name price")
+
+    res.json(orders)
+  } catch (error) {
+    console.error("Error fetching order history:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Get a specific order by ID
+router.get("/:id", auth, async (req, res) => {
+  try {
+    const order = await Order.findOne({ _id: req.params.id, user: req.user.userId }).populate(
+      "items.menuItem",
+      "name price",
+    )
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" })
+    }
+
+    res.json(order)
+  } catch (error) {
+    console.error("Error fetching order:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Update order status (could be used by admin in the future)
+router.patch("/:id/status", auth, async (req, res) => {
+  try {
+    const { status } = req.body
+
+    if (!["pending", "preparing", "completed", "cancelled"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" })
+    }
+
+    const order = await Order.findOneAndUpdate({ _id: req.params.id, user: req.user.userId }, { status }, { new: true })
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" })
+    }
+
+    res.json(order)
+  } catch (error) {
+    console.error("Error updating order status:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+export default router
+
+
+
+========================================
+
+=== backend\routes\users.js ===
+
+import express from "express"
+import User from "../models/User.js"
+import { auth } from "../middleware/auth.js";
+
+
+const router = express.Router()
+
+// Get user profile
+router.get("/profile", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select("-password")
+    if (!user) {
+      return res.status(404).json({ message: "User not found" })
+    }
+    res.json(user)
+  } catch (error) {
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Update user profile
+router.put("/profile", auth, async (req, res) => {
+  try {
+    const { name, phone, preferences } = req.body
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      {
+        name,
+        phone,
+        preferences,
+      },
+      { new: true },
+    ).select("-password")
+    if (!user) {
+      return res.status(404).json({ message: "User not found" })
+    }
+    res.json(user)
+  } catch (error) {
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Add funds to wallet
+router.post("/wallet/add", auth, async (req, res) => {
+  try {
+    const { amount } = req.body
+    const user = await User.findById(req.user.userId)
+    if (!user) {
+      return res.status(404).json({ message: "User not found" })
+    }
+    user.wallet.balance += amount
+    await user.save()
+    res.json({ balance: user.wallet.balance })
+  } catch (error) {
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+export default router
+
+
+
+========================================
+
+=== backend\tests\auth.test.js ===
+
+import request from "supertest"
+import app from "../index.js"
+import User from "../models/User.js"
+import mongoose from "mongoose"
+
+beforeAll(async () => {
+  await mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+})
+
+afterAll(async () => {
+  await mongoose.connection.close()
+})
+
+describe("Authentication", () => {
+  beforeEach(async () => {
+    await User.deleteMany({})
+  })
+
+  it("should register a new user", async () => {
+    const res = await request(app).post("/api/auth/register").send({
+      name: "Test User",
+      email: "test@example.com",
+      password: "password123",
+    })
+    expect(res.statusCode).toBe(201)
+    expect(res.body).toHaveProperty("token")
+    expect(res.body.user).toHaveProperty("name", "Test User")
+  })
+
+  it("should login an existing user", async () => {
+    await User.create({
+      name: "Test User",
+      email: "test@example.com",
+      password: "password123",
+    })
+
+    const res = await request(app).post("/api/auth/login").send({
+      email: "test@example.com",
+      password: "password123",
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toHaveProperty("token")
+    expect(res.body.user).toHaveProperty("name", "Test User")
+  })
+})
+
+
+
+========================================
+
+=== backend\vercel.json ===
+
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "index.js"
+    }
+  ]
+}
+
+
+
+========================================
+
+=== frontend1\.env.local ===
+
+NEXT_PUBLIC_API_URL=http://localhost:5000
+
+========================================
+
+=== frontend1\.gitignore ===
+
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+
+========================================
+
+=== frontend1\app\app.tsx ===
+
+
+
+========================================
+
+=== frontend1\app\globals.css ===
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(to bottom, transparent, rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
+}
+
+
+
+========================================
+
+=== frontend1\app\layout.tsx ===
+
+import "./globals.css"
+import { Inter } from "next/font/google"
+import { AuthProvider } from "@/contexts/auth-context"
+
+
+
+const inter = Inter({ subsets: ["latin"] })
+
+export const metadata = {
+  title: "Cafe Management System",
+  description: "Manage your cafe with ease",
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+      
+        <AuthProvider>{children}</AuthProvider>
+      </body>
+    </html>
+  )
+}
+
+
+
+========================================
+
+=== frontend1\app\page.tsx ===
+
+import { LoginForm } from "@/components/auth/login-form"
+
+export default function Home() {
+  return <LoginForm />
+}
+
+
+
+========================================
+
+=== frontend1\components\cart\cart-modal.tsx ===
+
+"use client"
+
+import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { X } from "lucide-react"
+
+interface CartItem {
+  name: string
+  quantity: number
+  price: number
+}
+
+interface CartModalProps {
+  isOpen: boolean
+  onClose: () => void
+  items: CartItem[]
+  onPlaceOrder: () => Promise<void>
+}
+
+export function CartModal({ isOpen, onClose, items, onPlaceOrder }: CartModalProps) {
+  const [rewardPoints, setRewardPoints] = useState("0")
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const discount = Number(rewardPoints) * 0.5
+  const total = subtotal - discount
+
+  const handlePlaceOrder = async () => {
+    await onPlaceOrder()
+    onClose()
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-[#E6DCC3] max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">Checkout</DialogTitle>
+          <Button variant="ghost" className="absolute right-4 top-4" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </DialogHeader>
+        <div className="space-y-4">
+          {items.map((item, index) => (
+            <div key={index} className="flex justify-between text-lg">
+              <span>
+                {item.name} x{item.quantity}
+              </span>
+              <span>₹{item.price * item.quantity}</span>
+            </div>
+          ))}
+          <div className="border-t pt-4">
+            <div className="flex justify-between font-semibold text-lg">
+              <span>Subtotal:</span>
+              <span>₹{subtotal}</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm">Redeem Reward Points (max 100)</label>
+            <Select value={rewardPoints} onValueChange={setRewardPoints}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[0, 10, 20, 50, 100].map((points) => (
+                  <SelectItem key={points} value={String(points)}>
+                    {points}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="border-t pt-4">
+            <div className="flex justify-between font-bold text-xl">
+              <span>Total:</span>
+              <span>₹{total}</span>
+            </div>
+            <div className="text-sm text-gray-600 mt-2">Current balance: ₹1000</div>
+          </div>
+          <div className="flex gap-4 pt-4">
+            <Button variant="outline" onClick={onClose} className="flex-1">
+              Cancel
+            </Button>
+            <Button className="flex-1 bg-[#2C1810] text-[#E6DCC3] hover:bg-[#1F110B]" onClick={handlePlaceOrder}>
+              Confirm Order
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+
+
+========================================
+
+=== frontend1\components\cart\success-modal.tsx ===
+
+"use client"
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { CheckCircle2 } from "lucide-react"
+
+interface SuccessModalProps {
+  isOpen: boolean
+  onClose: () => void
+  orderDetails: {
+    items: Array<{ name: string; quantity: number; price: number }>
+    subtotal: number
+    pointsRedeemed: number
+    total: number
+    newBalance: number
+    pointsEarned: number
+    newPoints: number
+  }
+}
+
+export function SuccessModal({ isOpen, onClose, orderDetails }: SuccessModalProps) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-[#E6DCC3] max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+            <CheckCircle2 className="h-6 w-6 text-green-500" />
+            Order Placed Successfully!
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-gray-600">Thank you for your order. Your coffee will be ready shortly.</p>
+          <div className="space-y-2">
+            <h4 className="font-semibold text-lg">Order Summary:</h4>
+            {orderDetails.items.map((item, index) => (
+              <div key={index} className="flex justify-between text-sm">
+                <span>
+                  {item.name} x{item.quantity}
+                </span>
+                <span>₹{item.price * item.quantity}</span>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Subtotal:</span>
+              <span>₹{orderDetails.subtotal}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Reward Points Redeemed:</span>
+              <span>
+                {orderDetails.pointsRedeemed} (₹{orderDetails.pointsRedeemed * 0.5})
+              </span>
+            </div>
+            <div className="flex justify-between font-semibold text-lg">
+              <span>Total:</span>
+              <span>₹{orderDetails.total}</span>
+            </div>
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>New balance:</span>
+              <span>₹{orderDetails.newBalance}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Reward Points earned:</span>
+              <span>{orderDetails.pointsEarned}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>New Reward Points balance:</span>
+              <span>{orderDetails.newPoints}</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 pt-4">
+            <Button className="bg-[#2C1810] text-[#E6DCC3] hover:bg-[#1F110B]">Continue Ordering</Button>
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+
+
+========================================
+
+=== frontend1\components\menu\menu-grid.tsx ===
+
+"use client"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Plus, Minus } from "lucide-react"
+
+interface MenuItem {
+  id: string
+  name: string
+  price: number
+  rewardPoints: number
+}
+
+interface MenuGridProps {
+  items: MenuItem[]
+  onAddToCart: (item: MenuItem) => void
+}
+
+export function MenuGrid({ items, onAddToCart }: MenuGridProps) {
+  const [quantities, setQuantities] = useState<Record<string, number>>({})
+
+  const updateQuantity = (id: string, delta: number) => {
+    setQuantities((prev) => ({
+      ...prev,
+      [id]: Math.max(0, (prev[id] || 0) + delta),
+    }))
+  }
+
+  return (
+    <div className="p-6 bg-[#2C1810] min-h-screen">
+      <h2 className="text-2xl font-bold mb-6 text-[#E6DCC3]">Beverages</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {items.map((item) => (
+          <div key={item.id} className="bg-[#E6DCC3] p-4 rounded-lg">
+            <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-lg">₹{item.price}</span>
+              <span className="text-sm text-gray-600">Reward Points: {item.rewardPoints}</span>
+            </div>
+            <div className="flex items-center justify-between mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => updateQuantity(item.id, -1)}
+                className="h-8 w-8 rounded-full bg-[#2C1810] text-[#E6DCC3]"
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <span className="mx-4 text-lg">{quantities[item.id] || 0}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => updateQuantity(item.id, 1)}
+                className="h-8 w-8 rounded-full bg-[#2C1810] text-[#E6DCC3]"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <Button className="w-full bg-[#2C1810] text-[#E6DCC3] hover:bg-[#1F110B]" onClick={() => onAddToCart(item)}>
+              Add to Cart
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+
+
+========================================
+
+=== frontend1\components\orders\order-history.tsx ===
+
+"use client"
+
+import { useEffect, useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { getOrderHistory } from "@/lib/api"
+
+interface OrderItem {
+  menuItem: {
+    name: string
+    price: number
+  }
+  quantity: number
+}
+
+interface Order {
+  _id: string
+  items: OrderItem[]
+  total: number
+  createdAt: string
+  status: string
+}
+
+export function OrderHistory() {
+  const [orders, setOrders] = useState<Order[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const fetchedOrders = await getOrderHistory()
+        setOrders(fetchedOrders)
+      } catch (error) {
+        console.error("Failed to fetch order history:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchOrders()
+  }, [])
+
+  if (isLoading) {
+    return <div>Loading order history...</div>
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Order History</h2>
+      {orders.map((order) => (
+        <Card key={order._id} className="bg-[#E6DCC3]">
+          <CardHeader>
+            <CardTitle>Order #{order._id.slice(-6)}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {order.items.map((item, index) => (
+                <div key={index} className="flex justify-between">
+                  <span>
+                    {item.menuItem.name} x{item.quantity}
+                  </span>
+                  <span>₹{(item.menuItem.price * item.quantity).toFixed(2)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between font-bold">
+                <span>Total:</span>
+                <span>₹{order.total.toFixed(2)}</span>
+              </div>
+              <div className="text-sm text-gray-600">Date: {new Date(order.createdAt).toLocaleString()}</div>
+              <div className="text-sm font-semibold">Status: {order.status}</div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+
+
+========================================
+
+=== frontend1\components\profile\profile-card.tsx ===
+
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { User, Mail, Phone, Edit2, LogOut } from "lucide-react"
+
+interface UserProfile {
+  name: string
+  email: string
+  phone: string
+  memberSince: string
+  preferences: {
+    favoriteCoffee: string
+    preferredMilk: string
+    rewardsTier: string
+  }
+}
+
+const MOCK_PROFILE: UserProfile = {
+  name: "Negi",
+  email: "harshsingh@example.com",
+  phone: "9189784556",
+  memberSince: "2023",
+  preferences: {
+    favoriteCoffee: "Espresso",
+    preferredMilk: "Oat",
+    rewardsTier: "Gold",
+  },
+}
+
+export function ProfileCard() {
+  return (
+    <div className="min-h-screen bg-[#2C1810] p-6">
+      <div className="max-w-md mx-auto bg-[#E6DCC3] rounded-lg p-6">
+        <h2 className="text-2xl font-bold mb-6">User Profile</h2>
+        <div className="space-y-6">
+          <div className="flex items-center space-x-4">
+            <div className="h-16 w-16 rounded-full bg-[#2C1810] flex items-center justify-center">
+              <User className="h-8 w-8 text-[#E6DCC3]" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold">{MOCK_PROFILE.name}</h3>
+              <p className="text-sm text-gray-600">Member since {MOCK_PROFILE.memberSince}</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Mail className="h-5 w-5" />
+              <span>{MOCK_PROFILE.email}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Phone className="h-5 w-5" />
+              <span>{MOCK_PROFILE.phone}</span>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-2">Preferences</h4>
+            <ul className="space-y-1 text-sm">
+              <li>Favorite coffee: {MOCK_PROFILE.preferences.favoriteCoffee}</li>
+              <li>Preferred milk: {MOCK_PROFILE.preferences.preferredMilk}</li>
+              <li>Rewards member: {MOCK_PROFILE.preferences.rewardsTier}</li>
+            </ul>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Button className="bg-[#2C1810] text-[#E6DCC3] hover:bg-[#1F110B]">
+              <Edit2 className="h-4 w-4 mr-2" />
+              Edit Profile
+            </Button>
+            <Button variant="destructive">
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+
+========================================
+
+=== frontend1\components\ui\button.tsx ===
+
+import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { cva, type VariantProps } from "class-variance-authority"
+
+import { cn } from "@/lib/utils"
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "underline-offset-4 hover:underline text-primary",
+      },
+      size: {
+        default: "h-10 py-2 px-4",
+        sm: "h-9 px-3 rounded-md",
+        lg: "h-11 px-8 rounded-md",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  },
+)
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
+    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+  },
+)
+Button.displayName = "Button"
+
+export { Button, buttonVariants }
+
+
+
+========================================
+
+=== frontend1\components\ui\card.tsx ===
+
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className)} {...props} />
+))
+Card.displayName = "Card"
+
+const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />
+  ),
+)
+CardHeader.displayName = "CardHeader"
+
+const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
+  ({ className, ...props }, ref) => (
+    <h3 ref={ref} className={cn("text-2xl font-semibold leading-none tracking-tight", className)} {...props} />
+  ),
+)
+CardTitle.displayName = "CardTitle"
+
+const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+  ({ className, ...props }, ref) => (
+    <p ref={ref} className={cn("text-sm text-muted-foreground", className)} {...props} />
+  ),
+)
+CardDescription.displayName = "CardDescription"
+
+const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />,
+)
+CardContent.displayName = "CardContent"
+
+const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("flex items-center p-6 pt-0", className)} {...props} />
+  ),
+)
+CardFooter.displayName = "CardFooter"
+
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
+
+
+
+========================================
+
+=== frontend1\components\ui\input.tsx ===
+
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(({ className, type, ...props }, ref) => {
+  return (
+    <input
+      type={type}
+      className={cn(
+        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      )}
+      ref={ref}
+      {...props}
+    />
+  )
+})
+Input.displayName = "Input"
+
+export { Input }
+
+
+
+========================================
+
+=== frontend1\components\ui\select.tsx ===
+
+"use client"
+
+import * as React from "react"
+import * as SelectPrimitive from "@radix-ui/react-select"
+import { Check, ChevronDown } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+
+const Select = SelectPrimitive.Root
+
+const SelectGroup = SelectPrimitive.Group
+
+const SelectValue = SelectPrimitive.Value
+
+const SelectTrigger = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
+>(({ className, children, ...props }, ref) => (
+  <SelectPrimitive.Trigger
+    ref={ref}
+    className={cn(
+      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+      className,
+    )}
+    {...props}
+  >
+    {children}
+    <SelectPrimitive.Icon asChild>
+      <ChevronDown className="h-4 w-4 opacity-50" />
+    </SelectPrimitive.Icon>
+  </SelectPrimitive.Trigger>
+))
+SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+
+const SelectContent = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
+>(({ className, children, position = "popper", ...props }, ref) => (
+  <SelectPrimitive.Portal>
+    <SelectPrimitive.Content
+      ref={ref}
+      className={cn(
+        "relative z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        position === "popper" &&
+          "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+        className,
+      )}
+      position={position}
+      {...props}
+    >
+      <SelectPrimitive.Viewport
+        className={cn(
+          "p-1",
+          position === "popper" &&
+            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]",
+        )}
+      >
+        {children}
+      </SelectPrimitive.Viewport>
+    </SelectPrimitive.Content>
+  </SelectPrimitive.Portal>
+))
+SelectContent.displayName = SelectPrimitive.Content.displayName
+
+const SelectLabel = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Label>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.Label ref={ref} className={cn("py-1.5 pl-8 pr-2 text-sm font-semibold", className)} {...props} />
+))
+SelectLabel.displayName = SelectPrimitive.Label.displayName
+
+const SelectItem = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
+>(({ className, children, ...props }, ref) => (
+  <SelectPrimitive.Item
+    ref={ref}
+    className={cn(
+      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      className,
+    )}
+    {...props}
+  >
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <SelectPrimitive.ItemIndicator>
+        <Check className="h-4 w-4" />
+      </SelectPrimitive.ItemIndicator>
+    </span>
+
+    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+  </SelectPrimitive.Item>
+))
+SelectItem.displayName = SelectPrimitive.Item.displayName
+
+const SelectSeparator = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Separator>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.Separator ref={ref} className={cn("-mx-1 my-1 h-px bg-muted", className)} {...props} />
+))
+SelectSeparator.displayName = SelectPrimitive.Separator.displayName
+
+export { Select, SelectGroup, SelectValue, SelectTrigger, SelectContent, SelectLabel, SelectItem, SelectSeparator }
+
+
+
+========================================
+
+=== frontend1\components\wallet\wallet-card.tsx ===
+
+"use client"
+
+import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { useAuth } from "@/contexts/auth-context"
+import { addFunds } from "@/lib/api"
+
+export function WalletCard() {
+  const { user, updateUser } = useAuth()
+  const [amount, setAmount] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleAddFunds = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    try {
+      const updatedUser = await addFunds(Number.parseFloat(amount))
+      updateUser(updatedUser)
+      setAmount("")
+    } catch (error) {
+      console.error("Failed to add funds:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <Card className="w-full max-w-md mx-auto bg-[#E6DCC3]">
+      <CardHeader>
+        <CardTitle>Wallet</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="text-2xl font-bold">Balance: ₹{user?.wallet.balance.toFixed(2)}</div>
+        <div className="text-lg">Reward Points: {user?.wallet.rewardPoints}</div>
+        <form onSubmit={handleAddFunds} className="space-y-4">
+          <Input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Enter amount to add"
+            min="0"
+            step="0.01"
+            required
+          />
+          <Button type="submit" className="w-full bg-[#2C1810] hover:bg-[#1F110B]" disabled={isLoading}>
+            {isLoading ? "Adding Funds..." : "Add Funds"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+
+
+========================================
+
+=== frontend1\contexts\auth-context.tsx ===
+
+"use client";
+
+import { createContext, useContext, useState, useEffect } from "react";
+import type { ReactNode } from "react";
+import { useRouter } from "next/navigation"; // Import the router
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  wallet: {
+    balance: number;
+    rewardPoints: number;
+  };
+}
+
+interface AuthContextType {
+  user: User | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  isLoading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter(); // Initialize the router here
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setIsLoading(false);
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Include credentials (cookies)
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Login failed");
+      }
+
+      const data = await response.json();
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setUser(data.user);
+
+      // Redirect to /menu after successful login
+      router.push("/menu");
+    } catch (error) {
+      console.error("Login error:", error);
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
+
+
+========================================
+
+=== frontend1\eslint.config.mjs ===
+
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+import { FlatCompat } from "@eslint/eslintrc";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
+];
+
+export default eslintConfig;
+
+
+========================================
+
+=== frontend1\lib\api.ts ===
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+const buildHeaders = (tokenRequired = true) => {
+  const token = localStorage.getItem("token");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (tokenRequired && token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+};
+
+export async function login(email: string, password: string) {
+  const response = await fetch(`${API_URL}/auth/login`, {
+    method: "POST",
+    headers: buildHeaders(false), // No token required for login
+    credentials: "include",
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Login failed");
+  }
+
+  return response.json();
+}
+
+export async function placeOrder(order: any) {
+  const response = await fetch(`${API_URL}/orders`, {
+    method: "POST",
+    headers: buildHeaders(),
+    credentials: "include",
+    body: JSON.stringify(order),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to place order");
+  }
+
+  return response.json();
+}
+
+export async function getProfile() {
+  const response = await fetch(`${API_URL}/users/profile`, {
+    headers: buildHeaders(),
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch profile");
+  }
+
+  return response.json();
+}
+
+export async function addFunds(amount: number) {
+  const response = await fetch(`${API_URL}/users/wallet/add`, {
+    method: "POST",
+    headers: buildHeaders(),
+    credentials: "include",
+    body: JSON.stringify({ amount }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to add funds");
+  }
+
+  return response.json();
+}
+
+export async function getMenuItems() {
+  const response = await fetch(`${API_URL}/menu`);
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch menu items");
+  }
+
+  return response.json();
+}
+
+export async function getOrderHistory() {
+  const response = await fetch(`${API_URL}/orders/history`, {
+    headers: buildHeaders(),
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch order history");
+  }
+
+  return response.json();
+}
+
+
+========================================
+
+=== frontend1\lib\utils.ts ===
+
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+
+
+========================================
+
+=== frontend1\next-env.d.ts ===
+
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
+
+
+========================================
+
+=== frontend1\next.config.js ===
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  experimental: {
+    appDir: true,
+  },
+}
+
+module.exports = nextConfig
+
+
+
+========================================
+
+=== frontend1\package.json ===
+
+{
+  "name": "cafe-management-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.0.4",
+    "@radix-ui/react-select": "^1.2.2",
+    "@radix-ui/react-slot": "^1.0.2",
+    "class-variance-authority": "^0.6.0",
+    "clsx": "^1.2.1",
+    "lucide-react": "^0.244.0",
+    "next": "^15.1.6",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "tailwind-merge": "^1.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.2.5",
+    "@types/react": "18.2.8",
+    "@types/react-dom": "18.2.4",
+    "autoprefixer": "^10.4.14",
+    "eslint": "8.42.0",
+    "eslint-config-next": "13.4.4",
+    "postcss": "^8.4.24",
+    "tailwindcss": "^3.3.2",
+    "typescript": "5.1.3"
+  }
+}
+
+
+========================================
+
+=== frontend1\postcss.config.js ===
+
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+
+
+
+========================================
+
+=== frontend1\public\file.svg ===
+
+<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
+
+========================================
+
+=== frontend1\public\globe.svg ===
+
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
+
+========================================
+
+=== frontend1\public\next.svg ===
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
+
+========================================
+
+=== frontend1\public\vercel.svg ===
+
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+
+========================================
+
+=== frontend1\public\window.svg ===
+
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
+
+========================================
+
+=== frontend1\README.md ===
+
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+========================================
+
+=== frontend1\tailwind.config.js ===
+
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+    },
+  },
+  plugins: [],
+}
+
+
+
+========================================
+
+=== frontend1\tsconfig.json ===
+
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "next.config.js", "tailwind.config.js"],
+  "exclude": ["node_modules"]
+}
+
+
+
+========================================
+
+=== package.json ===
+
+{
+  "name": "cafe-management-system",
+  "version": "1.0.0",
+  "description": "Cafe Management System with frontend and backend",
+  "scripts": {
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend1 && npm run dev",
+    "install": "concurrently \"npm run install:backend\" \"npm run install:frontend\"",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend1 && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^6.5.1"
+  }
+}
+
+
+
+========================================
+
