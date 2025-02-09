@@ -21,7 +21,7 @@ export function hasUniqueIds(items: { id: string }[]): boolean {
     console.log("Duplicate IDs found.");
     // Find and log the duplicate IDs
     const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
-    console.log("Duplicate IDs:", [...new Set(duplicates)]);
+    
     return false;
   }
 }
