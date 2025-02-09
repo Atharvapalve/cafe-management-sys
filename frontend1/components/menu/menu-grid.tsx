@@ -22,10 +22,14 @@ export function MenuGrid({ items, onAddToCart }: MenuGridProps) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   const updateQuantity = (id: string, delta: number) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [id]: Math.max(0, (prev[id] || 0) + delta),
-    }));
+    setQuantities((prev) => {
+      const newQuantities = {
+        ...prev,
+        [id]: Math.max(0, (prev[id] || 0) + delta),
+      };
+      console.log("Updated quantities:", newQuantities); // Log the updated state
+      return newQuantities;
+    });
   };
 
   const handleAddToCart = (item: MenuItem) => {
@@ -34,10 +38,11 @@ export function MenuGrid({ items, onAddToCart }: MenuGridProps) {
       onAddToCart(item, quantity);
       setQuantities((prev) => ({ ...prev, [item.id]: 0 }));
     }
+    
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-4 gap-4">
       {items.map((item) => (
         <div key={item.id} className="border p-4 rounded-lg shadow-md">
           <h3 className="text-lg font-bold">{item.name}</h3>
