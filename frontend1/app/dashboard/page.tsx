@@ -10,6 +10,7 @@ import { CartModal } from "@/components/cart/cart-modal"
 import { SuccessModal } from "@/components/cart/success-modal"
 import { Button } from "@/components/ui/button"
 import { getMenuItems, placeOrder } from "@/lib/api"
+import { hasUniqueIds } from "@/lib/utils";
 
 interface MenuItem {
   id: string
@@ -36,15 +37,18 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchMenuItems() {
       try {
-        const items = await getMenuItems()
-        setMenuItems(items)
+        const items = await getMenuItems();
+        // Check for unique IDs
+        if (!hasUniqueIds(items)) {
+          console.error("Menu items contain duplicate IDs. Please fix the data.");
+        }
+        setMenuItems(items);
       } catch (error) {
-        console.error("Failed to fetch menu items:", error)
+        console.error("Failed to fetch menu items:", error);
       }
     }
-    fetchMenuItems()
-  }, [])
-
+    fetchMenuItems();
+  }, []);
   if (isLoading) {
     return <div>Loading...</div>
   }

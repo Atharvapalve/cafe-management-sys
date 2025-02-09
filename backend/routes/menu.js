@@ -31,4 +31,18 @@ router.post("/", auth, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// Delete a menu item (admin only)
+router.delete("/:id", auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const menuItem = await MenuItem.findByIdAndDelete(id);
+    if (!menuItem) {
+      return res.status(404).json({ message: "Menu item not found" });
+    }
+    res.json({ message: "Menu item deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
 export default router;
