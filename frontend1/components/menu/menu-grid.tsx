@@ -2,6 +2,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Minus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { getMenuItems } from "@/lib/api";
 
 interface MenuItem {
   id: string;
@@ -19,6 +22,7 @@ interface MenuGridProps {
 }
 
 export function MenuGrid({ items, onAddToCart }: MenuGridProps) {
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   const updateQuantity = (id: string, delta: number) => {
@@ -42,6 +46,7 @@ export function MenuGrid({ items, onAddToCart }: MenuGridProps) {
   };
 
   return (
+    
     <div className="grid grid-cols-4 gap-4">
       {items.map((item) => (
         <div key={item.id} className="border p-4 rounded-lg shadow-md">

@@ -54,3 +54,33 @@ body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(to bottom, transparent, rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
 }
+/* globals.css */
+.menu-item {
+  max-width: 250px; /* Adjust the width as needed */
+  margin-right: 16px; /* Add some space between cards */
+}
+
+.menu-item .card-content {
+  padding: 16px; /* Adjust padding inside the card */
+}
+
+.menu-item .card-title {
+  font-size: 18px; /* Adjust title size */
+}
+
+.menu-item .description {
+  font-size: 14px; /* Adjust description size */
+}
+
+.menu-item .price {
+  font-size: 16px; /* Adjust price size */
+}
+
+.menu-item .quantity-buttons {
+  display: flex;
+  align-items: center;
+}
+
+.menu-item .quantity-buttons button {
+  margin: 0 8px; /* Space between quantity buttons */
+}
