@@ -67,8 +67,8 @@ export async function addFunds(amount: number) {
   return response.json();
 }
 
-export async function getMenuItems() {
-  const response = await fetch(`${API_URL}/menu`);
+export async function getMenuItems(queryParams = "") {
+  const response = await fetch(`${API_URL}/menu?${queryParams}`);
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || "Failed to fetch menu items");
