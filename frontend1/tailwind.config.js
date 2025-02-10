@@ -8,38 +8,35 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        // Coffee Brown Theme
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "#6F4E37", // Dark Coffee Brown
+          foreground: "#FFFFFF", // White text for contrast
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "#A67B5B", // Lighter Coffee Brown
+          foreground: "#000000", // Black text for contrast
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "#D2B48C", // Beige (accent color)
+          foreground: "#000000", // Black text for contrast
         },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+        background: "#F5F5DC", // Creamy background
+        foreground: "#2C1810", // Deep Coffee Brown for text
+        muted: {
+          DEFAULT: "#E6DCC3", // Light Beige
+          foreground: "#2C1810", // Deep Coffee Brown
         },
+        destructive: {
+          DEFAULT: "#8B0000", // Red for errors
+          foreground: "#FFFFFF", // White text for contrast
+        },
+        border: "#A67B5B", // Light Coffee Brown for borders
+        input: "#E6DCC3", // Light Beige for inputs
+        ring: "#6F4E37", // Dark Coffee Brown for focus rings
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "#F5F5DC", // Creamy card background
+          foreground: "#2C1810", // Deep Coffee Brown for card text
         },
       },
       borderRadius: {
@@ -50,5 +47,4 @@ module.exports = {
     },
   },
   plugins: [],
-}
-
+};

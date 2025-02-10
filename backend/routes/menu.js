@@ -5,7 +5,16 @@ const router = express.Router();
 // Get all menu items
 router.get("/", async (req, res) => {
   try {
-    const menuItems = await MenuItem.find({ available: true });
+    const { category, minPrice, maxPrice } = req.query;
+    const filter = {};
+    if (category) filter.category = category;
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = parseFloat(minPrice);
+      if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+    }
+    const menuItems = await MenuItem.find({ ...filter, available: true });
+
     res.json(menuItems);
   } catch (error) {
     console.error("Error fetching menu items:", error);
