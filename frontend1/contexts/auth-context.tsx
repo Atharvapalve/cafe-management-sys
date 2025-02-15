@@ -4,6 +4,14 @@ import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
+interface AuthContextType {
+  user: User | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateUser: (updatedUser: User) => void;
+  isLoading: boolean;
+}
+
 interface User {
   id: string;
   name: string;
@@ -12,14 +20,13 @@ interface User {
     balance: number;
     rewardPoints: number;
   };
-}
-
-interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  updateUser: (updatedUser: User) => void;
-  isLoading: boolean;
+  memberSince?: string; // Add this field (optional)
+  phone?: string; // Add this field (optional)
+  preferences?: {
+    favoriteCoffee?: string; // Optional nested fields
+    preferredMilk?: string;
+    rewardsTier?: string;
+  }; // Add this field (optional)
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,11 +83,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setUser(null);
-    router.push("/");
+  const logout = async () => {
+    try {
+      // Call the logout API to clear the session (if needed)
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include", // Include credentials (cookies)
+      });
+
+      // Clear user data from local storage
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+
+      // Update the authentication context
+      setUser(null);
+
+      // Redirect to the login page
+      router.push("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const updateUser = (updatedUser: User) => {
