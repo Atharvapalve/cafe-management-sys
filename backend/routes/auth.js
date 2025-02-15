@@ -72,5 +72,14 @@ router.post("/login", validate([
     res.status(500).json({ message: "Server error" });
   }
 });
-
+router.post("/logout", (req, res) => {
+  try {
+    // Clear the token by setting it to an expired value or removing it
+    res.clearCookie("token"); // Clear the cookie if using cookies
+    res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Logout error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 export default router;

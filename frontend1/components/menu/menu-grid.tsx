@@ -123,19 +123,19 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
                 Reward Points: {item.rewardPoints}
               </p>
               {/* Quantity Selector */}
-              <div className="flex items-center justify-center space-x-4 mt-2">
+              <div className="flex items-center justify-center space-x-6 mt-2">
                 <Button
                   onClick={() => updateQuantity(item.id, -1)}
-                  className="h-8 w-8 rounded-full bg-[#2C1810] "
+                  className="h-8 w-8 rounded-full bg-[#2C1810] text-[#2C1810]"
                 >
-                  <Minus size={16} color="#E6DCC3" />
+                  <Minus size={16} color="#2C1810" />
                 </Button>
                 <span className="text-lg font-medium">{quantities[item.id] || 0}</span>
                 <Button
                   onClick={() => updateQuantity(item.id, 1)}
-                  className="h-8 w-8 rounded-full bg-[#2C1810] "
+                  className="h-8 w-8 rounded-full bg-[#2C1810] text-[#2C1810]"
                 >
-                  <Plus size={16} color="#E6DCC3" />
+                  <Plus size={16} color="#2C1810" />
                 </Button>
               </div>
               {/* Add to Cart Button */}
