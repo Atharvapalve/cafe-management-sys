@@ -21,7 +21,7 @@ interface SuccessModalProps {
 export function SuccessModal({ isOpen, onClose, orderDetails }: SuccessModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#E6DCC3] max-w-md">
+      <DialogContent className="bg-coffee-light max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
             <CheckCircle2 className="h-6 w-6 text-green-500" />
