@@ -12,7 +12,7 @@ interface AuthContextType {
   isLoading: boolean;
 }
 
-interface User {
+export interface User {
   id: string;
   name: string;
   email: string;
@@ -105,16 +105,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateUser = (updatedUser: User) => {
-    setUser(updatedUser);
-    localStorage.setItem("user", JSON.stringify(updatedUser));
-  };
+  const updateUser = (updatedUser: Partial<User>) => {
+    if (user) {
+      const newUser = { ...user, ...updatedUser }
+      setUser(newUser)
+      localStorage.setItem("user", JSON.stringify(newUser))
+      // Here you would typically also make an API call to update the user on the server
+    }
+  }
 
-  return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser, isLoading }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, login, logout, updateUser, isLoading }}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => {

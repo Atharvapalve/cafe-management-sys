@@ -15,7 +15,34 @@ router.get("/profile", auth, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// backend/routes/users.js
 
+router.put("/profile", auth, async (req, res) => {
+  try {
+    const { name, email, phone, preferences } = req.body;
+
+    // Find the user by ID
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update only the provided fields
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (phone) user.phone = phone;
+    if (preferences) user.preferences = preferences;
+
+    // Save the updated user
+    await user.save();
+
+    // Return the updated user
+    res.json(user);
+  } catch (error) {
+    console.error("Profile update error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 // Add funds to wallet
 router.post("/wallet/add", auth, async (req, res) => {
   try {
