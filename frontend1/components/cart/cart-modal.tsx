@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { X } from "lucide-react"
 
 interface CartItem {
-  id: string
+  _id: string
   name: string
   quantity: number
   price: number

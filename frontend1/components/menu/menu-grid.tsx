@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { getMenuItems } from "@/lib/api"
 
 interface MenuItem {
-  id: string
+  _id: string
   name: string
   price: number
   rewardPoints: number
@@ -43,22 +43,22 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
     }
   }
 
-  const updateQuantity = (id: string, delta: number) => {
+  const updateQuantity = (_id: string, delta: number) => {
     setQuantities((prev) => {
-      const newQuantity = Math.max(0, (prev[id] || 0) + delta); // Ensure quantity doesn't go below 0
+      const newQuantity = Math.max(0, (prev[_id] || 0) + delta)
       return {
         ...prev,
-        [id]: newQuantity,
-      };
-    });
-  };
+        [_id]: newQuantity,
+      }
+    })
+  }
   const handleAddToCart = (item: MenuItem) => {
-    const quantity = quantities[item.id] || 0;
+    const quantity = quantities[item._id] || 0;
     console.log("Adding to cart:", { item, quantity });
     if (quantity > 0) {
       onAddToCart(item, quantity);
       setQuantities((prev) => {
-        const newQuantities = { ...prev, [item.id]: 0 };
+        const newQuantities = { ...prev, [item._id]: 0 };
         console.log("After resetting quantity:", newQuantities);
         return newQuantities;
       });
@@ -113,7 +113,7 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
       {/* Menu Items Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {menuItems.map((item) => (
-  <div key={item.id} className="border p-4 rounded-lg shadow-md bg-coffee-medium text-coffee-cream">
+  <div key={item._id} className="border p-4 rounded-lg shadow-md bg-coffee-medium text-coffee-cream">
             {/* Display the item's image if available */}
             {item.image ? (
               <img
@@ -134,14 +134,14 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
               {/* Quantity Selector */}
               <div className="flex items-center justify-center space-x-6 mt-2">
                 <Button
-                  onClick={() => updateQuantity(item.id, -1)}
+                  onClick={() => updateQuantity(item._id, -1)}
                   className="h-8 w-8 rounded-full bg-coffee-medium hover:bg-[#6B4F3D] text-[#E6DCC3]" // Corrected button color
                 >-
                   <Minus size={16} color="#E6DCC3" /> {/* Corrected minus icon color */}
                 </Button>
-                <span className="text-lg font-medium">{quantities[item.id] || 0}</span>
+                <span className="text-lg font-medium">{quantities[item._id] || 0}</span>
                 <Button
-                  onClick={() => updateQuantity(item.id, 1)}
+                  onClick={() => updateQuantity(item._id, 1)}
                   className="h-8 w-8 rounded-full bg-coffee-medium hover:bg-[#6B4F3D] text-[#E6DCC3]" // Corrected button color
                 >+
                   <Plus size={16} color="#E6DCC3" /> {/* Corrected plus icon color */}
@@ -150,7 +150,7 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
               {/* Add to Cart Button */}
               <Button
                 onClick={() => handleAddToCart(item)}
-                disabled={!quantities[item.id]}
+                disabled={!quantities[item._id]}
                 className="mt-2 w-full bg-[#2C1810] hover:bg-[#6B4F3D] text-[#E6DCC3]"
               >
                 Add to Cart

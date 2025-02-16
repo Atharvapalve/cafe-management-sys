@@ -14,7 +14,7 @@ import { Coffee, Wallet, User, ShoppingBag, MenuIcon } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
 interface MenuItem {
-  id: string
+  _id: string
   name: string
   price: number
   rewardPoints: number
@@ -64,10 +64,10 @@ export default function Dashboard() {
 
   const handleAddToCart = (item: MenuItem, quantity: number) => {
     setCartItems((prevItems) => {
-      const existingItem = prevItems.find((i) => i.id === item.id); // Use 'id' here
+      const existingItem = prevItems.find((i) => i._id === item._id); // Use 'id' here
       if (existingItem) {
         return prevItems.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + quantity } : i
+          i._id === item._id ? { ...i, quantity: i.quantity + quantity } : i
         );
       }
       return [...prevItems, { ...item, quantity }];
@@ -78,7 +78,7 @@ export default function Dashboard() {
     try {
       const order = await placeOrder({
         items: cartItems.map((item) => ({
-          menuItemId: item.id,
+          menuItemId: item._id,
           quantity: item.quantity,
         })),
       })
