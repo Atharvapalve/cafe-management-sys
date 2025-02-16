@@ -1,3 +1,4 @@
+import { User } from "@/contexts/auth-context";
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const buildHeaders = (tokenRequired = true) => {
@@ -25,7 +26,23 @@ export async function login(email: string, password: string) {
 
   return response.json();
 }
+// frontend1/lib/api.ts
 
+export async function updateProfile(updatedUser: Partial<User>) {
+  const response = await fetch(`${API_URL}/users/profile`, {
+    method: "PUT",
+    headers: buildHeaders(),
+    credentials: "include",
+    body: JSON.stringify(updatedUser),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to update profile");
+  }
+
+  return response.json();
+}
 // Rest of your API functions remain the same
 export async function placeOrder(order: any) {
   const response = await fetch(`${API_URL}/orders`, {
