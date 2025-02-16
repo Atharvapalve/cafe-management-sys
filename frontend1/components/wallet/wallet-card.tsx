@@ -1,5 +1,4 @@
 "use client"
-
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,16 +10,25 @@ export function WalletCard() {
   const { user, updateUser } = useAuth()
   const [amount, setAmount] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleAddFunds = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null) // Clear previous errors
+
+    if (!amount || Number(amount) <= 0) {
+      setError("Please enter a valid amount greater than 0.")
+      return
+    }
+
     setIsLoading(true)
     try {
       const updatedUser = await addFunds(Number(amount))
-      updateUser(updatedUser)
-      setAmount("")
+      updateUser(updatedUser) // Update user state
+      setAmount("") // Reset input field
     } catch (error) {
       console.error("Failed to add funds:", error)
+      setError("An error occurred while adding funds. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -36,8 +44,20 @@ export function WalletCard() {
         <CardTitle>Wallet</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="text-2xl font-bold">Balance: ₹{user.wallet.balance.toFixed(2)}</div>
-        <div className="text-lg">Reward Points: {user.wallet.rewardPoints}</div>
+        {/* Display Balance */}
+        <div className="text-2xl font-bold">
+          Balance: ₹{(user?.wallet?.balance || 0).toFixed(2)}
+        </div>
+
+        {/* Display Reward Points */}
+        <div className="text-lg">
+          Reward Points: {user?.wallet?.rewardPoints || 0}
+        </div>
+
+        {/* Error Message */}
+        {error && <div className="text-red-500 text-sm">{error}</div>}
+
+        {/* Add Funds Form */}
         <form onSubmit={handleAddFunds} className="space-y-4">
           <Input
             type="number"
@@ -48,7 +68,11 @@ export function WalletCard() {
             step="0.01"
             required
           />
-          <Button type="submit" className="w-full bg-[#2C1810] hover:bg-[#1F110B]" disabled={isLoading}>
+          <Button
+            type="submit"
+            className="w-full bg-[#2C1810] hover:bg-[#1F110B]"
+            disabled={isLoading}
+          >
             {isLoading ? "Adding Funds..." : "Add Funds"}
           </Button>
         </form>
@@ -56,4 +80,3 @@ export function WalletCard() {
     </Card>
   )
 }
-
