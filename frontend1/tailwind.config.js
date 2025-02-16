@@ -4,39 +4,49 @@ module.exports = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
       colors: {
-        // Coffee Brown Theme
+        // Coffee Theme Colors
+        "coffee-dark": "#2C1810", // Dark brown for backgrounds
+        "coffee-medium": "#3D261C", // Medium brown for hover states
+        "coffee-light": "#E6DCC3", // Beige/cream for cards and content
+        "coffee-accent": "#8B4513", // Accent brown
+        "coffee-cream": "#F5F5DC", // Light cream for subtle highlights
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#6F4E37", // Dark Coffee Brown
-          foreground: "#FFFFFF", // White text for contrast
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "#A67B5B", // Lighter Coffee Brown
-          foreground: "#000000", // Black text for contrast
-        },
-        accent: {
-          DEFAULT: "#D2B48C", // Beige (accent color)
-          foreground: "#000000", // Black text for contrast
-        },
-        background: "#F5F5DC", // Creamy background
-        foreground: "#2C1810", // Deep Coffee Brown for text
-        muted: {
-          DEFAULT: "#E6DCC3", // Light Beige
-          foreground: "#2C1810", // Deep Coffee Brown
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
-          DEFAULT: "#8B0000", // Red for errors
-          foreground: "#FFFFFF", // White text for contrast
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
-        border: "#A67B5B", // Light Coffee Brown for borders
-        input: "#E6DCC3", // Light Beige for inputs
-        ring: "#6F4E37", // Dark Coffee Brown for focus rings
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
         card: {
-          DEFAULT: "#F5F5DC", // Creamy card background
-          foreground: "#2C1810", // Deep Coffee Brown for card text
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
       },
       borderRadius: {
@@ -47,4 +57,5 @@ module.exports = {
     },
   },
   plugins: [],
-};
+}
+

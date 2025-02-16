@@ -33,7 +33,7 @@ export function CartModal({ isOpen, onClose, items, onPlaceOrder }: CartModalPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#E6DCC3] max-w-md">
+      <DialogContent className="bg-coffee-light max-w-md">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Checkout</DialogTitle>
           <Button variant="ghost" className="absolute right-4 top-4" onClick={onClose}>
