@@ -39,15 +39,21 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchMenuItems() {
       try {
-        const items = await getMenuItems()
-        setMenuItems(items)
+        const response = await fetch("/api/menu-items");
+        const data = await response.json();
+  
+        const mappedItems = data.map((item: any) => ({
+          ...item,
+          id: item._id, // Map '_id' to 'id'
+        }));
+  
+        setMenuItems(mappedItems);
       } catch (error) {
-        console.error("Failed to fetch menu items:", error)
+        console.error("Failed to fetch menu items:", error);
       }
     }
-    fetchMenuItems()
-  }, [])
-
+    fetchMenuItems();
+  }, []);
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>
   }
@@ -58,13 +64,15 @@ export default function Dashboard() {
 
   const handleAddToCart = (item: MenuItem, quantity: number) => {
     setCartItems((prevItems) => {
-      const existingItem = prevItems.find((i) => i.id === item.id)
+      const existingItem = prevItems.find((i) => i.id === item.id); // Use 'id' here
       if (existingItem) {
-        return prevItems.map((i) => (i.id === item.id ? { ...i, quantity: i.quantity + quantity } : i))
+        return prevItems.map((i) =>
+          i.id === item.id ? { ...i, quantity: i.quantity + quantity } : i
+        );
       }
-      return [...prevItems, { ...item, quantity }]
-    })
-  }
+      return [...prevItems, { ...item, quantity }];
+    });
+  };
 
   const handlePlaceOrder = async () => {
     try {

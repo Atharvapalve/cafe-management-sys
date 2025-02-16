@@ -72,17 +72,23 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
         <h3 className="text-xl font-bold mb-4">Filter Menu</h3>
         <div className="flex flex-wrap gap-4">
           {/* Category Filter */}
-          <Select value={filters.category} onValueChange={(value) => setFilters({ ...filters, category: value })}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All">All</SelectItem>
-              <SelectItem value="Beverages">Beverages</SelectItem>
-              <SelectItem value="Snacks">Snacks</SelectItem>
-              <SelectItem value="Desserts">Desserts</SelectItem>
-            </SelectContent>
-          </Select>
+          <Select
+  value={filters.category}
+  onValueChange={(value) => {
+    // Set category to an empty string for "All"
+    setFilters({ ...filters, category: value === "All" ? "" : value });
+  }}
+>
+  <SelectTrigger className="w-60">
+    <SelectValue placeholder="Select Category" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="All">All</SelectItem>
+    <SelectItem value="Beverages">Beverages</SelectItem>
+    <SelectItem value="Snacks">Snacks</SelectItem>
+    <SelectItem value="Desserts">Desserts</SelectItem>
+  </SelectContent>
+</Select>
           {/* Price Range Filter */}
           <div className="flex items-center gap-2">
             <Input
