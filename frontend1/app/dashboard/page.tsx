@@ -5,14 +5,30 @@ import { useAuth } from "@/contexts/auth-context"
 import { MenuGrid } from "@/components/menu/menu-grid"
 import { WalletCard } from "@/components/wallet/wallet-card"
 import { ProfileCard } from "@/components/profile/profile-card"
-import { OrderHistory } from "@/components/orders/order-history"
 import { CartModal } from "@/components/cart/cart-modal"
 import { SuccessModal } from "@/components/cart/success-modal"
 import { Button } from "@/components/ui/button"
 import { getMenuItems, placeOrder } from "@/lib/api"
 import { Coffee, Wallet, User, ShoppingBag, MenuIcon } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getOrderHistory } from "@/lib/api";
 
+
+interface OrderItem {
+  menuItem: {
+    name: string;
+    price: number;
+  };
+  quantity: number;
+}
+interface Order {
+  _id: string;
+  items: OrderItem[];
+  total: number;
+  createdAt: string;
+  status: string;
+}
 interface MenuItem {
   _id: string
   name: string
@@ -27,7 +43,7 @@ interface CartItem extends MenuItem {
 }
 
 export default function Dashboard() {
-  const { user, isLoading } = useAuth()
+  const { user, updateUser,isLoading } = useAuth()
   const [activeTab, setActiveTab] = useState("menu")
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [cartItems, setCartItems] = useState<CartItem[]>([])
@@ -61,7 +77,7 @@ export default function Dashboard() {
   if (!user) {
     return <div className="flex items-center justify-center h-screen">Please log in to access the dashboard.</div>
   }
-
+  
   const handleAddToCart = (item: MenuItem, quantity: number) => {
     setCartItems((prevItems) => {
       const existingItem = prevItems.find((i) => i._id === item._id); // Use 'id' here
@@ -74,21 +90,33 @@ export default function Dashboard() {
     });
   };
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async (rewardPointsRedeemed: number) => {
     try {
       const order = await placeOrder({
         items: cartItems.map((item) => ({
           menuItemId: item._id,
           quantity: item.quantity,
         })),
-      })
-      setLastOrder(order)
-      setIsSuccessOpen(true)
-      setCartItems([])
+        rewardPointsRedeemed, // Use the passed value
+      });
+      console.log("Order response from API:", order);
+          updateUser(order.wallet);
+        setLastOrder({
+          
+          subtotal: order.order.subtotal || 0,
+          pointsRedeemed: order.order.rewardPointsRedeemed || 0,
+          total: order.order.total || 0,
+          newBalance: order.wallet.balance || 0,
+          pointsEarned: order.order.rewardPointsEarned || 0,
+          newPoints: order.wallet.rewardPoints || 0,
+        }); // Update lastOrder with the order details
+    setIsCartOpen(false);
+    setCartItems([]); // Close the cart modal
+    setIsSuccessOpen(true);
     } catch (error) {
-      console.error("Failed to place order:", error)
+      console.error("Failed to place order:", error);
     }
-  }
+  };
 
   const tabContent = {
     menu: <MenuGrid items={menuItems} onAddToCart={handleAddToCart} />,
@@ -224,10 +252,68 @@ export default function Dashboard() {
         items={cartItems}
         onPlaceOrder={handlePlaceOrder}
       />
-      {lastOrder && (
-        <SuccessModal isOpen={isSuccessOpen} onClose={() => setIsSuccessOpen(false)} orderDetails={lastOrder} />
-      )}
+    {lastOrder && (
+  <SuccessModal
+    isOpen={isSuccessOpen}
+    onClose={() => setIsSuccessOpen(false)}
+    orderDetails={{
+      items: lastOrder.items || [],
+      subtotal: lastOrder.subtotal || 0,
+      pointsRedeemed: lastOrder.rewardPointsRedeemed || 0,
+      total: lastOrder.total || 0,
+      newBalance: lastOrder.wallet?.balance || 0,
+      pointsEarned: lastOrder.rewardPointsEarned || 0,
+      newPoints: lastOrder.wallet?.rewardPoints || 0,
+    }}
+  />
+)}
     </div>
   )
 }
+export function OrderHistory() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const fetchedOrders = await getOrderHistory();
+        setOrders(fetchedOrders);
+      } catch (error) {
+        console.error("Failed to fetch order history:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
+  if (isLoading) {
+    return <div>Loading order history...</div>;
+  }
+
+  return (
+    <div>
+      <h2>Order History</h2>
+      {orders.map((order) => (
+        <Card key={order._id}>
+          <CardHeader>
+            <CardTitle>Order #{order._id.slice(-6)}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {order.items.map((item, index) => (
+              <div key={index}>
+                {item.menuItem.name} x{item.quantity} ₹
+                {(item.menuItem.price * item.quantity).toFixed(2)}
+              </div>
+            ))}
+            <div>Total: ₹{order.total.toFixed(2)}</div>
+            <div>Date: {new Date(order.createdAt).toLocaleString()}</div>
+            <div>Status: {order.status}</div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}

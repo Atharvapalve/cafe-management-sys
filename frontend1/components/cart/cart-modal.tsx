@@ -17,28 +17,39 @@ interface CartModalProps {
   isOpen: boolean
   onClose: () => void
   items: CartItem[]
-  onPlaceOrder: () => Promise<void>
+  onPlaceOrder: (rewardPointsRedeemed: number) => Promise<void>;
 }
 
 export function CartModal({ isOpen, onClose, items, onPlaceOrder }: CartModalProps) {
-  const [rewardPoints, setRewardPoints] = useState("0")
+  const [rewardPoints, setRewardPoints] = useState("0");
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const discount = Number(rewardPoints) * 0.5
   const total = subtotal - discount
 
   const handlePlaceOrder = async () => {
-    await onPlaceOrder()
-    onClose()
-  }
+    const parsedRewardPoints = Number(rewardPoints);
 
+    // Validate rewardPoints
+    if (isNaN(parsedRewardPoints) || parsedRewardPoints < 0) {
+      console.error("Invalid reward points:", rewardPoints);
+      return alert("Please enter a valid number for reward points.");
+    }
+    
+  
+    try {
+      await onPlaceOrder(parsedRewardPoints);
+      onClose();
+      
+    } catch (error) {
+      console.error("Failed to place order:", error);
+    }
+  };
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-coffee-light max-w-md">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Checkout</DialogTitle>
-          <Button variant="ghost" className="absolute right-4 top-4" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+          
         </DialogHeader>
         <div className="space-y-4">
           {items.map((item, index) => (

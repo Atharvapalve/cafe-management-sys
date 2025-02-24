@@ -1,5 +1,5 @@
 import { User } from "@/contexts/auth-context";
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 const buildHeaders = (tokenRequired = true) => {
   const token = localStorage.getItem("token");
@@ -50,11 +50,14 @@ export async function placeOrder(order: any) {
     headers: buildHeaders(),
     credentials: "include",
     body: JSON.stringify(order),
+    
   });
   if (!response.ok) {
     const errorData = await response.json();
+    
     throw new Error(errorData.message || "Failed to place order");
   }
+  
   return response.json();
 }
 
