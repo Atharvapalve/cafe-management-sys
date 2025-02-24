@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, userType: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updatedUser: User) => void;
   isLoading: boolean;
@@ -16,6 +16,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  role: string;
   wallet: {
     balance: number;
     rewardPoints: number;
@@ -45,19 +46,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, userType: string) => {
     try {
-      console.log('Attempting login with:', { email }); // Log login attempt
-      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL); // Log API URL
-
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include', // Add this back
-      });
+        credentials: "include",
+        body: JSON.stringify({ email, password, userType }),
+      })
 
       console.log('Response status:', response.status); // Log response status
 
@@ -114,8 +112,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  return <AuthContext.Provider value={{ user, login, logout, updateUser, isLoading }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ user, login, logout, updateUser, isLoading }}>
+      {children}
+    </AuthContext.Provider> 
+  );
 }
+
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
