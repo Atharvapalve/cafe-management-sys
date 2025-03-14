@@ -1,6 +1,7 @@
 import express from "express";
 import User from "../models/User.js"; // Import the User model
 import { auth } from "../middleware/auth.js";
+import { admin } from "../middleware/admin.js";
 const router = express.Router();
 export { router };
 // Example route
@@ -32,6 +33,7 @@ router.put("/profile", auth, async (req, res) => {
     if (email) user.email = email;
     if (phone) user.phone = phone;
     if (preferences) user.preferences = preferences;
+    
 
     // Save the updated user
     await user.save();
@@ -54,6 +56,15 @@ router.post("/wallet/add", auth, async (req, res) => {
     user.wallet.balance += amount; // Add the amount to the wallet balance
     await user.save(); // Save the updated user document
     res.json(user); // Respond with the updated balance
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.get("/admin/users", auth, admin, async (req, res) => {
+  try {
+    const users = await User.find({}, "name email phone memberSince");
+    res.json(users);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
