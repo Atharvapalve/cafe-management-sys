@@ -30,13 +30,17 @@ router.post(
       }
 
       // Create a new user
-      user = new User({ name, email, password });
+      user = new User({ name, email, password, role : "user" });
       await user.save();
 
       // Generate JWT token
-      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-      res.status(201).json({ token, user });
-    } catch (error) {
+      const token = jwt.sign(
+        { userId: user._id, role: user.role }, // Include the role
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+      res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+  } catch (error) {
       console.error("Registration error:", error);
       res.status(500).json({ message: "Server error" });
     }
@@ -58,7 +62,16 @@ router.post("/login", validate([
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    console.log("User found during login:", user);
+
+    // Generate JWT token with role
+    const tokenPayload = { userId: user._id, role: user.role }; // Include the role
+    console.log("Generated token payload:", tokenPayload);
+    const token = jwt.sign(
+      { userId: user._id, role: user.role }, // Include the role
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
     // Set the token as a cookie
     res.cookie('token', token, {
       httpOnly: true,
@@ -66,7 +79,7 @@ router.post("/login", validate([
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
-    res.json({ token, user });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: "Server error" });

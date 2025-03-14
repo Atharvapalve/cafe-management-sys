@@ -20,6 +20,9 @@ export default function AdminDashboard() {
     async function fetchData() {
       try {
         const [menuData, userData, orderData] = await Promise.all([getMenuItems(), getUsers(), getOrders()])
+        console.log("Fetched menu data:", menuData); // Debug log: Confirm menu data
+        console.log("Fetched user data:", userData); // Debug log: Confirm user data
+        console.log("Fetched order data:", orderData); // Debug log: Confirm order data
         setMenuItems(menuData)
         setUsers(userData)
         setOrders(orderData)
