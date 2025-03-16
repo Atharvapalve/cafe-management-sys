@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { getMenuItems } from "@/lib/api"
 
-interface MenuItem {
+export interface MenuItem {
   _id: string
   name: string
   price: number
