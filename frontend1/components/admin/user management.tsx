@@ -3,11 +3,11 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 interface User {
-  _id: string
-  name: string
-  email: string
-  phone: string
-  memberSince: string
+  _id: string;
+  name: string;
+  email: string;
+  memberSince: string;
+  phone: string;
 }
 
 export function UserManagement({ users }: { users: User[] }) {

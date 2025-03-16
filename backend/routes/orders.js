@@ -111,15 +111,24 @@ res.status(201).json({
 });
 router.get("/history", auth, async (req, res) => {
   try {
-    console.log("Fetching order history for user:", req.user.userId); // Debugging log
-    const orders = await Order.find({ user: req.user.userId })
-      .sort({ createdAt: -1 })
-      .populate("items.menuItem", "name price");
-      console.log("Orders found:", orders);
+    let orders;
+    if (req.user.role === "admin") {
+      // For admin, fetch all orders
+      orders = await Order.find()
+        .sort({ createdAt: -1 })
+        .populate("items.menuItem", "name price");
+    } else {
+      // For regular users, only fetch their orders
+      orders = await Order.find({ user: req.user.userId })
+        .sort({ createdAt: -1 })
+        .populate("items.menuItem", "name price");
+    }
+    console.log("Orders found:", orders);
     res.json(orders);
   } catch (error) {
     console.error("Error fetching order history:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 export default router;

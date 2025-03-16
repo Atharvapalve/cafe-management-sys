@@ -1,17 +1,18 @@
 import { User } from "@/contexts/auth-context";
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+import { MenuItem } from "@/components/menu/menu-grid";
 
-const buildHeaders = (tokenRequired = true) => {
+function buildHeaders(tokenRequired = true) {
   const token = localStorage.getItem("token");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
   if (tokenRequired && token) {
-    headers.Authorization = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
+  console.log("Request headers:", headers); // Debug log
   return headers;
-};
-
+}
 export async function login(email: string, password: string, userType: string) {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
@@ -113,16 +114,25 @@ export async function getOrderHistory() {
 }
 
 export async function getUsers() {
-  console.log("Fetching users from:", `${API_URL}/api/users/admin/users`);
-  const response = await fetch(`${API_URL}/api/users/admin/users`, { // Correct URL
-    headers: buildHeaders(),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || "Failed to fetch users");
+  try {
+    console.log("Fetching users from:", `${API_URL}/users/admin/users`);
+    const response = await fetch(`${API_URL}/users/admin/users`, {
+      headers: buildHeaders(),
+      credentials: "include",
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Failed to fetch users:", errorData); // Debug log
+      throw new Error(errorData.message || "Failed to fetch users");
+    }
+    const users = await response.json();
+    console.log("Fetched users:", users); // Debug log
+    return users;
+  } catch (error) {
+    console.error("Network or server error:", error); // Log network errors
+    throw error;
+    
   }
-  return response.json();
 }
 
 export async function updateOrderStatus(orderId: string, status: string) {
@@ -156,7 +166,7 @@ export async function addMenuItem(item: any) {
 
 // Add this function to fetch admin orders
 export async function getOrders() {
-  const response = await fetch(`${API_URL}/api/admin/orders`, {
+  const response = await fetch(`${API_URL}/admin/orders`, {
     headers: buildHeaders(),
     credentials: "include",
   });
@@ -167,4 +177,23 @@ export async function getOrders() {
   }
   
   return response.json();
+}
+// Example of proper export
+export async function updateMenuItem(id: string, updatedItem: Partial<MenuItem>) {
+  const response = await fetch(`${API_URL}/api/menu/${id}`, {
+    method: "PUT",
+    headers: buildHeaders(),
+    credentials: "include",
+    body: JSON.stringify(updatedItem),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to update menu item");
+  }
+  return response.json();
+}
+export async function deleteMenuItem(id: string) {
+  return await fetch(`${process.env.NEXT_PUBLIC_API_URL}/menu/${id}`, {
+    method: "DELETE",
+  });
 }

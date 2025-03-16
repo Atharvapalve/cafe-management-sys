@@ -64,6 +64,7 @@ router.post("/wallet/add", auth, async (req, res) => {
 router.get("/admin/users", auth, admin, async (req, res) => {
   try {
     const users = await User.find({}, "name email phone memberSince");
+    console.log("Fetched users from database:", users); // Debug log
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: "Server error" });

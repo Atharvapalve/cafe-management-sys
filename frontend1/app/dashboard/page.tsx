@@ -13,7 +13,17 @@ import { Coffee, Wallet, User, ShoppingBag, MenuIcon } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getOrderHistory } from "@/lib/api";
+import { getProfile } from "@/lib/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+interface LastOrder {
+  subtotal: number;
+  pointsRedeemed: number;
+  total: number;
+  newBalance: number;
+  pointsEarned: number;
+  newPoints: number;
+}
 
 interface OrderItem {
   menuItem: {
@@ -41,7 +51,13 @@ interface MenuItem {
 interface CartItem extends MenuItem {
   quantity: number
 }
-
+const buildHeaders = () => {
+  const token = localStorage.getItem("token"); // Assuming the token is stored in localStorage
+  return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+  };
+};
 export default function Dashboard() {
   const { user, updateUser,isLoading } = useAuth()
   const [activeTab, setActiveTab] = useState("menu")
@@ -92,31 +108,90 @@ export default function Dashboard() {
 
   const handlePlaceOrder = async (rewardPointsRedeemed: number) => {
     try {
-      const order = await placeOrder({
-        items: cartItems.map((item) => ({
-          menuItemId: item._id,
-          quantity: item.quantity,
-        })),
-        rewardPointsRedeemed, // Use the passed value
-      });
-      console.log("Order response from API:", order);
-          updateUser(order.wallet);
-        setLastOrder({
-          
-          subtotal: order.order.subtotal || 0,
-          pointsRedeemed: order.order.rewardPointsRedeemed || 0,
-          total: order.order.total || 0,
-          newBalance: order.wallet.balance || 0,
-          pointsEarned: order.order.rewardPointsEarned || 0,
-          newPoints: order.wallet.rewardPoints || 0,
-        }); // Update lastOrder with the order details
-    setIsCartOpen(false);
-    setCartItems([]); // Close the cart modal
-    setIsSuccessOpen(true);
+        // Step 1: Fetch user profile (including wallet data)
+        const user = await getProfile();
+
+        // Step 2: Check if wallet data exists
+        if (!user.wallet || typeof user.wallet.balance !== "number") {
+            throw new Error("Wallet data is missing or invalid.");
+        }
+
+        // Step 3: Calculate total order amount
+        const total = cartItems.reduce(
+            (sum, item) => sum + item.price * item.quantity,
+            0
+        );
+
+        // Step 4: Check if user has sufficient balance
+        const newBalance = user.wallet.balance - total;
+        if (newBalance < 0) {
+            throw new Error("Insufficient balance in wallet.");
+        }
+
+        // Step 5: Prepare order payload
+        const orderDetails = {
+            items: cartItems.map((item) => ({
+                menuItemId: item._id,
+                quantity: item.quantity,
+            })),
+            rewardPointsRedeemed,
+        };
+
+        // Step 6: Place the order via API
+        const orderResponse = await fetch(`${API_URL}/orders`, {
+            method: "POST",
+            headers: buildHeaders(),
+            credentials: "include",
+            body: JSON.stringify(orderDetails),
+        });
+
+        if (!orderResponse.ok) {
+            const errorData = await orderResponse.json();
+            throw new Error(errorData.message || "Failed to place order.");
+        }
+
+        const orderData = await orderResponse.json();
+
+        // Step 7: Update user wallet
+        const newPoints =
+            user.wallet.rewardPoints -
+            rewardPointsRedeemed +
+            orderData.order.rewardPointsEarned;
+
+        const updateUser = (wallet: { balance: number; rewardPoints: number }) => {
+            console.log("Updated wallet:", wallet);
+        };
+
+        updateUser({
+            balance: newBalance,
+            rewardPoints: newPoints,
+        });
+
+        // Step 8: Update last order state
+        const lastOrderDetails: LastOrder = {
+            subtotal: orderData.order.subtotal,
+            pointsRedeemed: rewardPointsRedeemed,
+            total: orderData.order.total,
+            newBalance,
+            pointsEarned: orderData.order.rewardPointsEarned,
+            newPoints,
+        };
+
+        setLastOrder(lastOrderDetails);
+        setIsCartOpen(false);
+        setCartItems([]);
+        setIsSuccessOpen(true);
     } catch (error) {
-      console.error("Failed to place order:", error);
+        if (error instanceof Error) {
+            console.error("Failed to place order:", error.message);
+            alert(`Failed to place order: ${error.message}`);
+        } else {
+            console.error("An unknown error occurred:", error);
+            alert("An unknown error occurred while placing the order.");
+        }
     }
-  };
+};
+
 
   const tabContent = {
     menu: <MenuGrid items={menuItems} onAddToCart={handleAddToCart} />,
