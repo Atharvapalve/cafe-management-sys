@@ -10,12 +10,14 @@ interface Order {
   user: {
     name: string
   }
-  total: number
-  status: string
-  createdAt: string
+  total: number;
+  status: string;
+  createdAt: string;
+  items: { menuItem: { name: string; price: number }; quantity: number }[];
 }
 
 export function OrderManagement({ orders }: { orders: Order[] }) {
+  console.log("Rendering OrderManagement component with orders:", orders);
   const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {

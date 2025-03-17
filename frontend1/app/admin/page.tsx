@@ -5,7 +5,7 @@ import React from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getMenuItems, getUsers, getOrders } from "@/lib/api";
+import { getMenuItems, getUsers, getAdminOrders } from "@/lib/api";
 import { MenuManagement } from "@/components/admin/menu management";
 import { UserManagement } from "@/components/admin/user management";
 import { OrderManagement } from "@/components/admin/order management";
@@ -27,6 +27,7 @@ const AdminDashboard = () => {
   const usersRef = useRef<User[]>([]);
 
   console.log("🔄 AdminDashboard re-rendered, users state:", users);
+  console.log("Fetching data for AdminDashboard...");
 
   const fetchData = useCallback(async () => {
     let menuData: any = [];
@@ -49,7 +50,7 @@ const AdminDashboard = () => {
 
     // Fetch orders separately
     try {
-      orderData = await getOrders();
+      orderData = await getAdminOrders();
     } catch (error) {
       console.error("❌ getOrders failed:", error);
     }
@@ -61,6 +62,7 @@ const AdminDashboard = () => {
       return [...userData];
     });
     setMenuItems(menuData);
+    console.log("Fetched admin orders:", orderData); // Debug log
     setOrders(orderData);
   }, []);
 
