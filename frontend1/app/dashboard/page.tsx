@@ -69,6 +69,7 @@ export default function Dashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
+    
     async function fetchMenuItems() {
       try {
         const response = await fetch("/api/menu-items");

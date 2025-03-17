@@ -132,3 +132,24 @@ router.get("/history", auth, async (req, res) => {
 });
 
 export default router;
+
+router.get("/admin/orders", auth, async (req, res) => {
+  try {
+    console.log("Fetching admin orders for user:", req.user.userId);
+      // Ensure only admins can access this route
+      if (req.user.role !== "admin") {
+          return res.status(403).json({ message: "Access denied. Admins only." });
+      }
+
+      // Fetch all orders and populate relevant fields
+      const orders = await Order.find()
+          .sort({ createdAt: -1 }) // Sort by most recent
+          .populate("items.menuItem", "name price") // Populate menu item details
+          .populate("user", "name email"); // Populate user details
+          console.log("Fetched admin orders:", orders);
+      res.json(orders);
+  } catch (error) {
+      console.error("Error fetching admin orders:", error.message);
+      res.status(500).json({ message: "Server error" });
+  }
+});

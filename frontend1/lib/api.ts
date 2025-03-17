@@ -135,19 +135,7 @@ export async function getUsers() {
   }
 }
 
-export async function updateOrderStatus(orderId: string, status: string) {
-  const response = await fetch(`${API_URL}/orders/${orderId}`, {
-    method: "PUT",
-    headers: buildHeaders(),
-    credentials: "include",
-    body: JSON.stringify({ status }),
-  });
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || "Failed to update order status");
-  }
-  return response.json();
-}
+
 
 export async function addMenuItem(item: any) {
   const response = await fetch(`${API_URL}/menu`, {
@@ -196,4 +184,33 @@ export async function deleteMenuItem(id: string) {
   return await fetch(`${process.env.NEXT_PUBLIC_API_URL}/menu/${id}`, {
     method: "DELETE",
   });
+}
+export async function getAdminOrders() {
+  console.log("Fetching admin orders from:", `${API_URL}/admin/orders`);
+  const response = await fetch(`${API_URL}/orders/admin/orders`, {
+      headers: buildHeaders(),
+      credentials: "include",
+  });
+
+  if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Failed to fetch admin orders. Error:", errorData);
+      throw new Error(errorData.message || "Failed to fetch admin orders");
+  }
+  const orders = await response.json();
+  console.log("Fetched admin orders:", orders); // Debug log
+  return orders;
+}
+export async function updateOrderStatus(orderId: string, status: string) {
+  const response = await fetch(`${API_URL}/orders/${orderId}`, {
+    method: "PUT",
+    headers: buildHeaders(),
+    credentials: "include",
+    body: JSON.stringify({ status }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to update order status");
+  }
+  return response.json();
 }
