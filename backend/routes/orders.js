@@ -153,3 +153,22 @@ router.get("/admin/orders", auth, async (req, res) => {
       res.status(500).json({ message: "Server error" });
   }
 });
+// Add this route below your other order routes
+router.put("/:orderId", auth, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+    // Find the order by ID
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    // Update the status
+    order.status = status;
+    await order.save();
+    res.json({ message: "Order status updated", order });
+  } catch (error) {
+    console.error("Error updating order status:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
