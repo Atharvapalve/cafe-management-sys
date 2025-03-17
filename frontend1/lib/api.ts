@@ -2,17 +2,21 @@ import { User } from "@/contexts/auth-context";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 import { MenuItem } from "@/components/menu/menu-grid";
 
-function buildHeaders(tokenRequired = true) {
+function buildHeaders(tokenRequired = true, isFormData = false) {
   const token = localStorage.getItem("token");
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const headers: Record<string, string> = {};
+
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
   if (tokenRequired && token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
+
   console.log("Request headers:", headers); // Debug log
   return headers;
 }
+
 export async function login(email: string, password: string, userType: string) {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
@@ -137,19 +141,21 @@ export async function getUsers() {
 
 
 
-export async function addMenuItem(item: any) {
-  const response = await fetch(`${API_URL}/menu`, {
+export async function addMenuItem(data: FormData) {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_URL}/menu`, {
     method: "POST",
-    headers: buildHeaders(),
-    credentials: "include",
-    body: JSON.stringify(item),
+    headers: buildHeaders(true, true), // Use buildHeaders function correctly
+    body: data,
+
   });
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || "Failed to add menu item");
+  if (!res.ok) {
+    throw new Error("Failed to add menu item");
   }
-  return response.json();
+  return res.json();
 }
+
+
 // frontend1/lib/api.ts
 
 // Add this function to fetch admin orders
@@ -167,24 +173,33 @@ export async function getOrders() {
   return response.json();
 }
 // Example of proper export
-export async function updateMenuItem(id: string, updatedItem: Partial<MenuItem>) {
-  const response = await fetch(`${API_URL}/api/menu/${id}`, {
+export async function updateMenuItem(id: string, data: FormData) {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_URL}/menu/${id}`, {
     method: "PUT",
-    headers: buildHeaders(),
-    credentials: "include",
-    body: JSON.stringify(updatedItem),
+    headers: buildHeaders(true, true), // Use buildHeaders function correctly
+    body: data,
   });
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || "Failed to update menu item");
+  if (!res.ok) {
+    throw new Error("Failed to update menu item");
   }
-  return response.json();
+  return res.json();
 }
+
+
 export async function deleteMenuItem(id: string) {
-  return await fetch(`${process.env.NEXT_PUBLIC_API_URL}/menu/${id}`, {
+  const res = await fetch(`${API_URL}/menu/${id}`, {
     method: "DELETE",
+    headers: buildHeaders(true),
+    credentials: "include",
   });
+  if (!res.ok) {
+    throw new Error("Failed to delete menu item");
+  }
+  return await res.json();
 }
+
+
 export async function getAdminOrders() {
   console.log("Fetching admin orders from:", `${API_URL}/admin/orders`);
   const response = await fetch(`${API_URL}/orders/admin/orders`, {
