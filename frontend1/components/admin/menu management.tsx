@@ -16,10 +16,20 @@ interface MenuItem {
 
 export function MenuManagement({ items }: { items: MenuItem[] }) {
   const [newItem, setNewItem] = useState({ name: "", price: "", category: "", rewardPoints: "" })
+  const [image, setImage] = useState<File | null>(null);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(items); 
 
   const handleAddItem = async () => {
     try {
-      await addMenuItem(newItem)
+      const formData = new FormData();
+      formData.append("name", newItem.name);
+      formData.append("price", newItem.price);
+      formData.append("category", newItem.category);
+      formData.append("rewardPoints", newItem.rewardPoints);
+      if (image) {
+        formData.append("image", image);
+      }
+      await addMenuItem(formData);
       // Refresh menu items
     } catch (error) {
       console.error("Failed to add menu item:", error)
@@ -28,8 +38,16 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
 
   const handleUpdateItem = async (id: string, updatedItem: Partial<MenuItem>) => {
     try {
-      await updateMenuItem(id, updatedItem)
-      // Refresh menu items
+      const formData = new FormData();
+      if (updatedItem.name) formData.append("name", updatedItem.name);
+      if (updatedItem.price) formData.append("price", updatedItem.price.toString());
+      if (updatedItem.category) formData.append("category", updatedItem.category);
+      if (updatedItem.rewardPoints) formData.append("rewardPoints", updatedItem.rewardPoints.toString());
+      if (image) {
+        formData.append("image", image);
+      }
+      await updateMenuItem(id, formData);
+      // Refresh menu items after update
     } catch (error) {
       console.error("Failed to update menu item:", error)
     }
@@ -37,13 +55,15 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
 
   const handleDeleteItem = async (id: string) => {
     try {
-      await deleteMenuItem(id)
-      // Refresh menu items
+      await deleteMenuItem(id); // Call the API to delete the item
+  
+      // ✅ Update state to remove the deleted item from the UI
+      setMenuItems((prevItems) => prevItems.filter(item => item._id !== id));
+      
     } catch (error) {
-      console.error("Failed to delete menu item:", error)
+      console.error("Failed to delete menu item:", error);
     }
-  }
-
+  };
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Menu Management</h2>
@@ -70,8 +90,14 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
           value={newItem.rewardPoints}
           onChange={(e) => setNewItem({ ...newItem, rewardPoints: e.target.value })}
         />
-        <Button onClick={handleAddItem}>Add Item</Button>
-      </div>
+         {/* File input for image selection */}
+  <Input
+    type="file"
+    accept="image/*"
+    onChange={(e) => setImage(e.target.files ? e.target.files[0] : null)}
+  />
+  <Button onClick={handleAddItem}>Add Item</Button>
+</div>
       <Table>
         <TableHeader>
           <TableRow>
@@ -83,17 +109,16 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((item) => (
+          {menuItems.map((item) => (
             <TableRow key={item._id}>
               <TableCell>{item.name}</TableCell>
               <TableCell>{item.price}</TableCell>
               <TableCell>{item.category}</TableCell>
               <TableCell>{item.rewardPoints}</TableCell>
               <TableCell>
-                <Button onClick={() => handleUpdateItem(item._id, item)}>Edit</Button>
-                <Button variant="destructive" onClick={() => handleDeleteItem(item._id)}>
-                  Delete
-                </Button>
+              <Button onClick={() => handleUpdateItem(item._id, item)}>Edit</Button>
+<Button variant="destructive" onClick={() => handleDeleteItem(item._id)}>Delete</Button>
+
               </TableCell>
             </TableRow>
           ))}
