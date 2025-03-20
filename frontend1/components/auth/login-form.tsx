@@ -77,6 +77,12 @@ export function LoginForm() {
           <Button type="submit" className="w-full bg-[#2C1810] text-[#E6DCC3] hover:bg-[#1F110B]">
             Log In
           </Button>
+          <div className="mt-4 text-center">
+          Don't have an account?{" "}
+          <Button variant="link" onClick={() => router.push("/register")}>
+            Register here
+          </Button>
+        </div>
         </form>
       </div>
     </div>
