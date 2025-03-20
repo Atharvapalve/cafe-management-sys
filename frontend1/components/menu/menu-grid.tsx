@@ -117,7 +117,7 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
             {/* Display the item's image if available */}
             {item.image ? (
               <img
-                src={item.image || "/placeholder.svg"}
+              src={item.image.startsWith("http") ? item.image : `http://localhost:5000${item.image}`} 
                 alt={item.name}
                 className="w-full h-48 object-cover rounded-md mb-4"
               />

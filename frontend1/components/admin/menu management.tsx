@@ -52,7 +52,7 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
     setEditingImage(null);
   };
 
-  // --- CANCEL EDITING ---
+  // --- CANCEL EDITING --- 
   const cancelEditing = () => {
     setEditingId(null);
     setEditingData({});
@@ -137,30 +137,101 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
             <TableHead>Price</TableHead>
             <TableHead>Category</TableHead>
             <TableHead>Reward Points</TableHead>
+            <TableHead>Image</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {menuItems.map((item) => (
             <TableRow key={item._id}>
-              <TableCell>{item.name}</TableCell>
-              <TableCell>{item.price}</TableCell>
-              <TableCell>{item.category}</TableCell>
-              <TableCell>{item.rewardPoints}</TableCell>
               <TableCell>
-  {item.image ? (
-    <img src={item.image.startsWith("http") ? item.image : `${process.env.NEXT_PUBLIC_API_URL}/${item.image}`} 
-         alt={item.name} 
-         width={50} />
-  ) : (
-    "No Image"
-  )}
-</TableCell>
-
+                {editingId === item._id ? (
+                  <Input
+                    value={editingData.name || ""}
+                    onChange={(e) => setEditingData({ ...editingData, name: e.target.value })}
+                  />
+                ) : (
+                  item.name
+                )}
+              </TableCell>
               <TableCell>
-              <Button onClick={() => handleUpdateItem(item._id, item)}>Edit</Button>
-<Button variant="destructive" onClick={() => handleDeleteItem(item._id)}>Delete</Button>
-
+                {editingId === item._id ? (
+                  <Input
+                    type="number"
+                    value={editingData.price || ""}
+                    onChange={(e) =>
+                      setEditingData({ ...editingData, price: parseFloat(e.target.value) })
+                    }
+                  />
+                ) : (
+                  item.price
+                )}
+              </TableCell>
+              <TableCell>
+                {editingId === item._id ? (
+                  <Input
+                    value={editingData.category || ""}
+                    onChange={(e) => setEditingData({ ...editingData, category: e.target.value })}
+                  />
+                ) : (
+                  item.category
+                )}
+              </TableCell>
+              <TableCell>
+                {editingId === item._id ? (
+                  <Input
+                    type="number"
+                    value={editingData.rewardPoints || ""}
+                    onChange={(e) =>
+                      setEditingData({ ...editingData, rewardPoints: parseInt(e.target.value, 10) })
+                    }
+                  />
+                ) : (
+                  item.rewardPoints
+                )}
+              </TableCell>
+              <TableCell>
+                {editingId === item._id ? (
+                  <>
+                    {item.image ? (
+                      <img
+                        src={item.image.startsWith("http") ? item.image : `http://localhost:5000${item.image}`}
+                        alt={item.name}
+                        width={50}
+                      />
+                    ) : (
+                      "No Image"
+                    )}
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setEditingImage(e.target.files ? e.target.files[0] : null)}
+                    />
+                  </>
+                ) : (
+                  item.image ? (
+                    <img
+                      src={item.image.startsWith("http") ? item.image : `http://localhost:5000${item.image}`}
+                      alt={item.name}
+                      width={50}
+                    />
+                  ) : (
+                    "No Image"
+                  )
+                )}
+              </TableCell>
+              <TableCell>
+                {editingId === item._id ? (
+                  <>
+                    <Button onClick={() => handleUpdateItem(item._id, editingData)}>Save</Button>
+                    <Button variant="destructive" onClick={cancelEditing}>Cancel</Button>
+                  </>
+                ) : (
+                  <>
+                    <Button onClick={() => startEditing(item)}>Edit</Button>
+                    <Button variant="destructive" onClick={() => handleDeleteItem(item._id)}>Delete</Button>
+                  </>
+                )}
               </TableCell>
             </TableRow>
           ))}
@@ -168,5 +239,6 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
       </Table>
     </div>
   )
+
 }
 

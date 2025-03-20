@@ -11,6 +11,7 @@ import { router as userRoutes } from "./routes/users.js";
 dotenv.config();
 
 const app = express();
+app.use("/uploads", express.static("uploads"));
 
 // Middleware
 app.use(
