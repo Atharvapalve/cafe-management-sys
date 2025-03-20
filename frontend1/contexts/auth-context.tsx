@@ -41,7 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = localStorage.getItem("user");
     const token = localStorage.getItem("token");
     if (storedUser && token) {
-      setUser(JSON.parse(storedUser));
+      let parsedUser = JSON.parse(storedUser);
+
+    // ✅ Ensure wallet is initialized for existing users
+    parsedUser.wallet = {
+      balance: parsedUser.wallet?.balance ?? 100,
+      rewardPoints: parsedUser.wallet?.rewardPoints ?? 0,
+    };
+    
+
+    setUser(parsedUser);
     }
     setIsLoading(false);
   }, []);
@@ -67,6 +76,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       console.log('Login successful, data:', { ...data, token: '***' }); // Log success data (hide token)
+      data.user.wallet = {
+        balance: data.user.wallet?.balance ?? 100,
+        rewardPoints: data.user.wallet?.rewardPoints ?? 0,
+      };
+      
       
       // Store token and user data
       localStorage.setItem("token", data.token);
@@ -105,12 +119,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUser = (updatedUser: Partial<User>) => {
     if (user) {
-      const newUser = { ...user, ...updatedUser }
-      setUser(newUser)
-      localStorage.setItem("user", JSON.stringify(newUser))
-      // Here you would typically also make an API call to update the user on the server
+      const newUser: User = {
+        ...user,
+        ...updatedUser,
+        wallet: {
+          balance: updatedUser.wallet?.balance ?? user.wallet.balance,
+          rewardPoints: updatedUser.wallet?.rewardPoints ?? user.wallet.rewardPoints,
+        },
+      };
+      
+
+      setUser(newUser);
+      localStorage.setItem("user", JSON.stringify(newUser));
     }
-  }
+  };
 
   return (
     <AuthContext.Provider value={{ user, login, logout, updateUser, isLoading }}>

@@ -87,6 +87,5 @@ router.put("/:id", auth, upload.single("image"), async (req, res) => {
   }
 });
 
-router.use("/uploads", express.static("uploads"));
 
 export default router;
