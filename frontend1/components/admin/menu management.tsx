@@ -6,18 +6,25 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { addMenuItem, updateMenuItem, deleteMenuItem } from "@/lib/api"
 
-interface MenuItem {
-  _id: string
-  name: string
-  price: number
-  category: string
-  rewardPoints: number
+export interface MenuItem {
+  _id: string;
+  name: string;
+  price: number;
+  category: string;
+  rewardPoints: number;
+  image?: string;
 }
 
 export function MenuManagement({ items }: { items: MenuItem[] }) {
-  const [newItem, setNewItem] = useState({ name: "", price: "", category: "", rewardPoints: "" })
-  const [image, setImage] = useState<File | null>(null);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(items); 
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(items);
+  // New item state for adding an item
+  const [newItem, setNewItem] = useState({ name: "", price: "", category: "", rewardPoints: "" });
+  const [newImage, setNewImage] = useState<File | null>(null);
+  
+  // State for tracking which item is in editing mode
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingData, setEditingData] = useState<Partial<MenuItem>>({});
+  const [editingImage, setEditingImage] = useState<File | null>(null);
 
   const handleAddItem = async () => {
     try {
@@ -26,28 +33,53 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
       formData.append("price", newItem.price);
       formData.append("category", newItem.category);
       formData.append("rewardPoints", newItem.rewardPoints);
-      if (image) {
-        formData.append("image", image);
+      if (newImage) {
+        formData.append("image", newImage);
       }
-      await addMenuItem(formData);
-      // Refresh menu items
-    } catch (error) {
+      const addedItem = await addMenuItem(formData);      // Refresh menu items
+      setMenuItems((prev) => [...prev, addedItem]);
+      // Reset the input fields
+      setNewItem({ name: "", price: "", category: "", rewardPoints: "" });
+      setNewImage(null);
+    }catch (error) {
       console.error("Failed to add menu item:", error)
     }
   }
+   // --- START EDITING ---
+   const startEditing = (item: MenuItem) => {
+    setEditingId(item._id);
+    setEditingData(item);
+    setEditingImage(null);
+  };
+
+  // --- CANCEL EDITING ---
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditingData({});
+    setEditingImage(null);
+  };
+
 
   const handleUpdateItem = async (id: string, updatedItem: Partial<MenuItem>) => {
     try {
       const formData = new FormData();
       if (updatedItem.name) formData.append("name", updatedItem.name);
-      if (updatedItem.price) formData.append("price", updatedItem.price.toString());
+      if (updatedItem.price !== undefined) formData.append("price", updatedItem.price.toString());
       if (updatedItem.category) formData.append("category", updatedItem.category);
-      if (updatedItem.rewardPoints) formData.append("rewardPoints", updatedItem.rewardPoints.toString());
-      if (image) {
-        formData.append("image", image);
+      if (updatedItem.rewardPoints !== undefined) {
+        formData.append("rewardPoints", updatedItem.rewardPoints.toString());
       }
-      await updateMenuItem(id, formData);
-      // Refresh menu items after update
+      if (editingImage) {
+        formData.append("image", editingImage);
+      }
+      console.log("Updating menu item with ID:", id);
+      console.log("FormData contents:",  Array.from(formData.entries())); // Log data being sent
+      const response = await updateMenuItem(id, formData);
+      setMenuItems((prev) =>
+        prev.map((item) => (item._id === id ? { ...item, ...updatedItem, image: response.image } : item))
+      );
+      cancelEditing();
+      console.log("Update response:", response);
     } catch (error) {
       console.error("Failed to update menu item:", error)
     }
@@ -94,7 +126,7 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
   <Input
     type="file"
     accept="image/*"
-    onChange={(e) => setImage(e.target.files ? e.target.files[0] : null)}
+    onChange={(e) => setNewImage(e.target.files ? e.target.files[0] : null)}
   />
   <Button onClick={handleAddItem}>Add Item</Button>
 </div>
@@ -115,6 +147,16 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
               <TableCell>{item.price}</TableCell>
               <TableCell>{item.category}</TableCell>
               <TableCell>{item.rewardPoints}</TableCell>
+              <TableCell>
+  {item.image ? (
+    <img src={item.image.startsWith("http") ? item.image : `${process.env.NEXT_PUBLIC_API_URL}/${item.image}`} 
+         alt={item.name} 
+         width={50} />
+  ) : (
+    "No Image"
+  )}
+</TableCell>
+
               <TableCell>
               <Button onClick={() => handleUpdateItem(item._id, item)}>Edit</Button>
 <Button variant="destructive" onClick={() => handleDeleteItem(item._id)}>Delete</Button>

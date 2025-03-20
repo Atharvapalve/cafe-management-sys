@@ -74,12 +74,22 @@ export async function getProfile() {
     headers: buildHeaders(),
     credentials: "include",
   });
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || "Failed to fetch profile");
   }
-  return response.json();
+
+  const userData = await response.json();
+
+  // ✅ Ensure wallet is initialized in case backend fails to set it
+  if (!userData.wallet) {
+    userData.wallet = { balance: 100, rewardPoints: 0 };
+  }
+
+  return userData;
 }
+
 
 export async function addFunds(amount: number) {
   const response = await fetch(`${API_URL}/users/wallet/add`, {
@@ -174,15 +184,26 @@ export async function getOrders() {
 }
 // Example of proper export
 export async function updateMenuItem(id: string, data: FormData) {
+  console.log("Sending update request for:", id);
+  console.log("Request Body:",  Array.from(data.entries()));
   const token = localStorage.getItem("token");
   const res = await fetch(`${API_URL}/menu/${id}`, {
     method: "PUT",
     headers: buildHeaders(true, true), // Use buildHeaders function correctly
     body: data,
   });
+  
+  
   if (!res.ok) {
-    throw new Error("Failed to update menu item");
+    try {
+      const errorData = await res.json(); // ✅ Ensure it's read only once
+      console.error("Update error:", errorData);
+      throw new Error(errorData.message || "Failed to update menu item");
+    } catch {
+      throw new Error("Failed to update menu item (Unknown Error)");
+    }
   }
+
   return res.json();
 }
 

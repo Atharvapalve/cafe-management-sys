@@ -363,12 +363,19 @@ export function OrderHistory() {
             <CardTitle>Order #{order._id.slice(-6)}</CardTitle>
           </CardHeader>
           <CardContent>
-            {order.items.map((item, index) => (
-              <div key={index}>
-                {item.menuItem.name} x{item.quantity} ₹
-                {(item.menuItem.price * item.quantity).toFixed(2)}
-              </div>
-            ))}
+          {order.items.map((item, index) => (
+  <div key={index}>
+    {item.menuItem ? (
+      <>
+        {item.menuItem.name} x{item.quantity} ₹
+        {(item.menuItem.price * item.quantity).toFixed(2)}
+      </>
+    ) : (
+      <span className="text-red-500">[Item Deleted]</span>
+    )}
+  </div>
+))}
+
             <div>Total: ₹{order.total.toFixed(2)}</div>
             <div>Date: {new Date(order.createdAt).toLocaleString()}</div>
             <div>Status: {order.status}</div>
