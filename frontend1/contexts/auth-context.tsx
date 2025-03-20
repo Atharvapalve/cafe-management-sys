@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // ✅ Ensure wallet is initialized for existing users
     parsedUser.wallet = {
-      balance: parsedUser.wallet?.balance ?? 100,
+      balance: parsedUser.wallet?.balance ?? 0,
       rewardPoints: parsedUser.wallet?.rewardPoints ?? 0,
     };
     
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       console.log('Login successful, data:', { ...data, token: '***' }); // Log success data (hide token)
       data.user.wallet = {
-        balance: data.user.wallet?.balance ?? 100,
+        balance: data.user.wallet?.balance ?? 0,
         rewardPoints: data.user.wallet?.rewardPoints ?? 0,
       };
       

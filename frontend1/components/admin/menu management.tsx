@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -17,6 +17,11 @@ export interface MenuItem {
 
 export function MenuManagement({ items }: { items: MenuItem[] }) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>(items);
+  
+  useEffect(() => {
+    setMenuItems(items);
+  }, [items]);
+  
   // New item state for adding an item
   const [newItem, setNewItem] = useState({ name: "", price: "", category: "", rewardPoints: "" });
   const [newImage, setNewImage] = useState<File | null>(null);
