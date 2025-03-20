@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getOrderHistory } from "@/lib/api";
 import { getProfile } from "@/lib/api";
+import { Input } from "@/components/ui/input";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
