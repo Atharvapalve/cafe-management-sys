@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getOrderHistory } from "@/lib/api";
 import { getProfile } from "@/lib/api";
 import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -62,6 +63,7 @@ const buildHeaders = () => {
 };
 export default function Dashboard() {
   const { user, updateUser,isLoading } = useAuth()
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("menu")
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [cartItems, setCartItems] = useState<CartItem[]>([])
@@ -70,7 +72,16 @@ export default function Dashboard() {
   const [lastOrder, setLastOrder] = useState<any>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
+
   useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/");
+    }
+  }, [isLoading, user, router]);
+
+  // 🔹 Fetch menu items once on mount
+  useEffect(() => {
+    
     
     async function fetchMenuItems() {
       try {
@@ -89,13 +100,7 @@ export default function Dashboard() {
     }
     fetchMenuItems();
   }, []);
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>
-  }
-
-  if (!user) {
-    return <div className="flex items-center justify-center h-screen">Please log in to access the dashboard.</div>
-  }
+  
   
   const handleAddToCart = (item: MenuItem, quantity: number) => {
     setCartItems((prevItems) => {

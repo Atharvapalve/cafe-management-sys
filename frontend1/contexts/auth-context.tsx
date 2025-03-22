@@ -21,13 +21,13 @@ export interface User {
     balance: number;
     rewardPoints: number;
   };
-  memberSince?: string; // Add this field (optional)
-  phone?: string; // Add this field (optional)
+  memberSince?: string;
+  phone?: string;
   preferences?: {
-    favoriteCoffee?: string; // Optional nested fields
+    favoriteCoffee?: string;
     preferredMilk?: string;
     rewardsTier?: string;
-  }; // Add this field (optional)
+  };
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,56 +38,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
     const token = localStorage.getItem("token");
-    if (storedUser && token) {
-      let parsedUser = JSON.parse(storedUser);
+    const storedUser = localStorage.getItem("user");
 
-    // ✅ Ensure wallet is initialized for existing users
-    parsedUser.wallet = {
-      balance: parsedUser.wallet?.balance ?? 0,
-      rewardPoints: parsedUser.wallet?.rewardPoints ?? 0,
-    };
-    
-
-    setUser(parsedUser);
+    if (!token || !storedUser) {
+      router.push("/");
+    } else {
+      setUser(JSON.parse(storedUser));
     }
     setIsLoading(false);
-  }, []);
+  }, []); // Removed `router` from dependencies to prevent unnecessary re-renders
 
   const login = async (email: string, password: string, userType: string) => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ email, password, userType }),
-      })
-
-      console.log('Response status:', response.status); // Log response status
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Login error response:', errorData); // Log error response
         throw new Error(errorData.message || "Login failed");
       }
 
       const data = await response.json();
-      console.log('Login successful, data:', { ...data, token: '***' }); // Log success data (hide token)
       data.user.wallet = {
         balance: data.user.wallet?.balance ?? 0,
         rewardPoints: data.user.wallet?.rewardPoints ?? 0,
       };
-      
-      
-      // Store token and user data
+
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       setUser(data.user);
 
-      // Redirect to dashboard
       router.push("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
@@ -97,20 +82,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      // Call the logout API to clear the session (if needed)
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
         method: "POST",
-        credentials: "include", // Include credentials (cookies)
+        credentials: "include",
       });
 
-      // Clear user data from local storage
       localStorage.removeItem("user");
       localStorage.removeItem("token");
-
-      // Update the authentication context
       setUser(null);
 
-      // Redirect to the login page
       router.push("/");
     } catch (error) {
       console.error("Logout error:", error);
@@ -127,7 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           rewardPoints: updatedUser.wallet?.rewardPoints ?? user.wallet.rewardPoints,
         },
       };
-      
 
       setUser(newUser);
       localStorage.setItem("user", JSON.stringify(newUser));
@@ -137,10 +116,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{ user, login, logout, updateUser, isLoading }}>
       {children}
-    </AuthContext.Provider> 
+    </AuthContext.Provider>
   );
 }
-
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -149,4 +127,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
