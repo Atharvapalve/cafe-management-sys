@@ -54,7 +54,7 @@ export function SuccessModal({ isOpen, onClose, orderDetails }: SuccessModalProp
           <p>New balance: ₹{newBalance}</p>
           <p>Reward Points earned: {pointsEarned}</p>
           <p>New Reward Points balance: {newPoints}</p>
-          <Button onClick={onClose}>Close</Button>
+          
         </div>
         
         <Button onClick={onClose}>Close</Button>
