@@ -1,23 +1,25 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useAuth } from "@/contexts/auth-context"
-import { MenuGrid } from "@/components/menu/menu-grid"
-import { WalletCard } from "@/components/wallet/wallet-card"
-import { ProfileCard } from "@/components/profile/profile-card"
-import { CartModal } from "@/components/cart/cart-modal"
-import { SuccessModal } from "@/components/cart/success-modal"
-import { Button } from "@/components/ui/button"
-import { getMenuItems, placeOrder } from "@/lib/api"
-import { Coffee, Wallet, User, ShoppingBag, MenuIcon } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import { MenuGrid } from "@/components/menu/menu-grid";
+import { WalletCard } from "@/components/wallet/wallet-card";
+import { ProfileCard } from "@/components/profile/profile-card";
+import { CartModal } from "@/components/cart/cart-modal";
+import { SuccessModal } from "@/components/cart/success-modal";
+import { Button } from "@/components/ui/button";
+import { getMenuItems, placeOrder, getOrderHistory, getProfile } from "@/lib/api";
+import { Coffee, Wallet, User, ShoppingBag, MenuIcon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getOrderHistory } from "@/lib/api";
-import { getProfile } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import io from "socket.io-client";
+import useOrderStatusListener from "@/hooks/useOrderStatusListener"; // This hook must be defined in /hooks/useOrderStatusListener.ts
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface LastOrder {
   subtotal: number;
@@ -35,64 +37,68 @@ interface OrderItem {
   };
   quantity: number;
 }
-interface Order {
+
+export interface Order {
   _id: string;
   items: OrderItem[];
   total: number;
   createdAt: string;
   status: string;
 }
-interface MenuItem {
-  _id: string
-  name: string
-  price: number
-  rewardPoints: number
-  description?: string
-  category?: string
+
+export interface MenuItem {
+  _id: string;
+  name: string;
+  price: number;
+  rewardPoints: number;
+  description?: string;
+  category?: string;
 }
 
-interface CartItem extends MenuItem {
-  quantity: number
+export interface CartItem extends MenuItem {
+  quantity: number;
 }
+
 const buildHeaders = () => {
-  const token = localStorage.getItem("token"); // Assuming the token is stored in localStorage
+  const token = localStorage.getItem("token"); // Ensure token is available
   return {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
   };
 };
+
 export default function Dashboard() {
-  const { user, updateUser,isLoading } = useAuth()
+  const { user, updateUser, isLoading } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("menu")
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [isCartOpen, setIsCartOpen] = useState(false)
-  const [isSuccessOpen, setIsSuccessOpen] = useState(false)
-  const [lastOrder, setLastOrder] = useState<any>(null)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState("menu");
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [lastOrder, setLastOrder] = useState<any>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-
+  // Redirect to login if user is not authenticated
   useEffect(() => {
     if (!isLoading && !user) {
       router.push("/");
     }
   }, [isLoading, user, router]);
 
-  // 🔹 Fetch menu items once on mount
+  // Fetch menu items on mount (using absolute URL)
   useEffect(() => {
-    
-    
     async function fetchMenuItems() {
       try {
-        const response = await fetch("/api/menu-items");
+        const response = await fetch(`${API_URL}/menu-items`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch menu items");
+        }
         const data = await response.json();
-  
+        console.log("Fetched menu items:", data);
         const mappedItems = data.map((item: any) => ({
           ...item,
           id: item._id, // Map '_id' to 'id'
         }));
-  
         setMenuItems(mappedItems);
       } catch (error) {
         console.error("Failed to fetch menu items:", error);
@@ -100,11 +106,10 @@ export default function Dashboard() {
     }
     fetchMenuItems();
   }, []);
-  
-  
+
   const handleAddToCart = (item: MenuItem, quantity: number) => {
     setCartItems((prevItems) => {
-      const existingItem = prevItems.find((i) => i._id === item._id); // Use 'id' here
+      const existingItem = prevItems.find((i) => i._id === item._id);
       if (existingItem) {
         return prevItems.map((i) =>
           i._id === item._id ? { ...i, quantity: i.quantity + quantity } : i
@@ -126,11 +131,9 @@ export default function Dashboard() {
         (sum, item) => sum + item.price * item.quantity,
         0
       );
-      // Check if sufficient balance exists.
       if (currentUser.wallet.balance < total) {
         throw new Error("Insufficient balance in wallet.");
       }
-      // Prepare order payload.
       const orderDetails = {
         items: cartItems.map((item) => ({
           menuItemId: item._id,
@@ -138,8 +141,7 @@ export default function Dashboard() {
         })),
         rewardPointsRedeemed,
       };
-      
-      // Place order via API.
+
       const orderResponse = await fetch(`${API_URL}/orders`, {
         method: "POST",
         headers: buildHeaders(),
@@ -151,23 +153,19 @@ export default function Dashboard() {
         throw new Error(errorData.message || "Failed to place order.");
       }
       const orderData = await orderResponse.json();
-      
-      // Fetch updated profile from the server to get the fresh wallet info.
       const updatedProfile = await getProfile();
       updateUser(updatedProfile);
-      
-      // Build last order details using the updated wallet info.
       const lastOrderDetails = {
         subtotal: orderData.order.subtotal,
         pointsRedeemed: rewardPointsRedeemed,
         total: orderData.order.total,
-        wallet: updatedProfile.wallet, // includes balance and rewardPoints
+        wallet: updatedProfile.wallet,
         pointsEarned: orderData.order.rewardPointsEarned,
       };
-      
       setLastOrder(lastOrderDetails);
       setIsCartOpen(false);
       setCartItems([]);
+      toast.success("Your order was placed successfully!");
       setIsSuccessOpen(true);
     } catch (error) {
       if (error instanceof Error) {
@@ -180,13 +178,13 @@ export default function Dashboard() {
     }
   };
 
-
+  // Define tab content components
   const tabContent = {
     menu: <MenuGrid items={menuItems} onAddToCart={handleAddToCart} />,
     wallet: <WalletCard />,
     profile: <ProfileCard />,
-    orders: <OrderHistory />,
-  }
+    orders: <OrderHistory currentUserId={user?.id || ""} />,
+  };
 
   return (
     <div className="flex h-screen bg-[#F5F5DC]">
@@ -230,7 +228,11 @@ export default function Dashboard() {
         {/* Mobile header */}
         <header className="md:hidden bg-[#2C1810] text-[#E6DCC3] p-4 flex justify-between items-center">
           <h1 className="text-xl font-bold">Cafe Manager</h1>
-          <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
             <MenuIcon className="h-6 w-6" />
           </Button>
         </header>
@@ -249,8 +251,8 @@ export default function Dashboard() {
                   variant={activeTab === "menu" ? "default" : "ghost"}
                   className="w-full justify-start"
                   onClick={() => {
-                    setActiveTab("menu")
-                    setIsMobileMenuOpen(false)
+                    setActiveTab("menu");
+                    setIsMobileMenuOpen(false);
                   }}
                 >
                   <Coffee className="mr-2 h-4 w-4" /> Menu
@@ -259,8 +261,8 @@ export default function Dashboard() {
                   variant={activeTab === "wallet" ? "default" : "ghost"}
                   className="w-full justify-start"
                   onClick={() => {
-                    setActiveTab("wallet")
-                    setIsMobileMenuOpen(false)
+                    setActiveTab("wallet");
+                    setIsMobileMenuOpen(false);
                   }}
                 >
                   <Wallet className="mr-2 h-4 w-4" /> Wallet
@@ -269,8 +271,8 @@ export default function Dashboard() {
                   variant={activeTab === "profile" ? "default" : "ghost"}
                   className="w-full justify-start"
                   onClick={() => {
-                    setActiveTab("profile")
-                    setIsMobileMenuOpen(false)
+                    setActiveTab("profile");
+                    setIsMobileMenuOpen(false);
                   }}
                 >
                   <User className="mr-2 h-4 w-4" /> Profile
@@ -279,8 +281,8 @@ export default function Dashboard() {
                   variant={activeTab === "orders" ? "default" : "ghost"}
                   className="w-full justify-start"
                   onClick={() => {
-                    setActiveTab("orders")
-                    setIsMobileMenuOpen(false)
+                    setActiveTab("orders");
+                    setIsMobileMenuOpen(false);
                   }}
                 >
                   <ShoppingBag className="mr-2 h-4 w-4" /> Orders
@@ -310,49 +312,81 @@ export default function Dashboard() {
 
       {/* Modals */}
       <CartModal
-  isOpen={isCartOpen}
-  onClose={() => setIsCartOpen(false)}
-  items={cartItems}
-  onPlaceOrder={handlePlaceOrder}
-  walletBalance={user?.wallet?.balance || 0} // Ensure walletBalance is being passed here
-/>
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        items={cartItems}
+        onPlaceOrder={handlePlaceOrder}
+        walletBalance={user?.wallet?.balance || 0}
+      />
 
-
-    {lastOrder && (
-  <SuccessModal
-    isOpen={isSuccessOpen}
-    onClose={() => setIsSuccessOpen(false)}
-    orderDetails={{
-      items: lastOrder.items || [],
-      subtotal: lastOrder.subtotal || 0,
-      pointsRedeemed: lastOrder.rewardPointsRedeemed || 0,
-      total: lastOrder.total || 0,
-      newBalance: lastOrder.wallet?.balance || 0,
-      pointsEarned: lastOrder.rewardPointsEarned || 0,
-      newPoints: lastOrder.wallet?.rewardPoints || 0,
-    }}
-  />
-)}
+      {lastOrder && (
+        <SuccessModal
+          isOpen={isSuccessOpen}
+          onClose={() => setIsSuccessOpen(false)}
+          orderDetails={{
+            items: lastOrder.items || [],
+            subtotal: lastOrder.subtotal || 0,
+            pointsRedeemed: lastOrder.rewardPointsRedeemed || 0,
+            total: lastOrder.total || 0,
+            newBalance: lastOrder.wallet?.balance || 0,
+            pointsEarned: lastOrder.rewardPointsEarned || 0,
+            newPoints: lastOrder.wallet?.rewardPoints || 0,
+          }}
+        />
+      )}
     </div>
-  )
+  );
 }
-export function OrderHistory() {
+
+export function OrderHistory({ currentUserId }: { currentUserId: string }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Use our order status listener hook
+  const orderUpdates = useOrderStatusListener(currentUserId);
+
   useEffect(() => {
-    const fetchOrders = async () => {
+    if (orderUpdates && orderUpdates.length > 0) {
+      orderUpdates.forEach((update: any) => {
+        toast.success(`Order ${update.orderId.slice(-6)} status updated to ${update.status}`);
+        // Optionally update local state for that order
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order._id === update.orderId ? { ...order, status: update.status } : order
+          )
+        );
+      });
+    }
+  }, [orderUpdates]);
+
+  useEffect(() => {
+    async function fetchOrders() {
       try {
         const fetchedOrders = await getOrderHistory();
+        console.log("Fetched order history:", fetchedOrders);
         setOrders(fetchedOrders);
       } catch (error) {
         console.error("Failed to fetch order history:", error);
       } finally {
         setIsLoading(false);
       }
-    };
-
+    }
     fetchOrders();
+
+    const socket = io(SOCKET_SERVER_URL);
+    socket.on("orderStatusUpdated", (data: any) => {
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order._id === data.orderId ? { ...order, status: data.status } : order
+        )
+      );
+      toast.success(`Your order ${data.orderId.slice(-6)} status is now ${data.status}`);
+    });
+
+    return () => {
+      socket.off("orderStatusUpdated");
+      socket.disconnect();
+    };
   }, []);
 
   if (isLoading) {
@@ -368,19 +402,18 @@ export function OrderHistory() {
             <CardTitle>Order #{order._id.slice(-6)}</CardTitle>
           </CardHeader>
           <CardContent>
-          {order.items.map((item, index) => (
-  <div key={index}>
-    {item.menuItem ? (
-      <>
-        {item.menuItem.name} x{item.quantity} ₹
-        {(item.menuItem.price * item.quantity).toFixed(2)}
-      </>
-    ) : (
-      <span className="text-red-500">[Item Deleted]</span>
-    )}
-  </div>
-))}
-
+            {order.items.map((item, index) => (
+              <div key={index}>
+                {item.menuItem ? (
+                  <>
+                    {item.menuItem.name} x{item.quantity} ₹
+                    {(item.menuItem.price * item.quantity).toFixed(2)}
+                  </>
+                ) : (
+                  <span className="text-red-500">[Item Deleted]</span>
+                )}
+              </div>
+            ))}
             <div>Total: ₹{order.total.toFixed(2)}</div>
             <div>Date: {new Date(order.createdAt).toLocaleString()}</div>
             <div>Status: {order.status}</div>

@@ -1,4 +1,7 @@
+// backend/index.js
 import express from "express";
+import http from "http";
+import { Server } from "socket.io";
 import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -7,17 +10,16 @@ import menuRoutes from "./routes/menu.js";
 import orderRoutes from "./routes/orders.js";
 import { router as userRoutes } from "./routes/users.js";
 
-// Load environment variables
 dotenv.config();
 
 const app = express();
 app.use("/uploads", express.static("uploads"));
 
-// Middleware
+// Express CORS middleware (for your REST API)
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000", // Allow frontend
-    credentials: true, // Allow cookies to be sent
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    credentials: true,
   })
 );
 app.use(express.json());
@@ -28,21 +30,28 @@ app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/users", userRoutes);
 
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || "Internal Server Error",
-  });
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.IO with updated CORS options:
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    methods: ["GET", "POST", "PUT"],
+    credentials: true, // <-- Add this line
+  },
 });
 
-// MongoDB Connection
+// Attach io instance to app locals for access in routes
+app.locals.io = io;
+
+// Connect to MongoDB and start the server
 mongoose
   .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
