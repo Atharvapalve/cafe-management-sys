@@ -39,7 +39,7 @@ router.post(
         process.env.JWT_SECRET,
         { expiresIn: "7d" }
       );
-      res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+      res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role,wallet: user.wallet } });
   } catch (error) {
       console.error("Registration error:", error);
       res.status(500).json({ message: "Server error" });
@@ -79,7 +79,7 @@ router.post("/login", validate([
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role,wallet: user.wallet } });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: "Server error" });

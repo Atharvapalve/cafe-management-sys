@@ -17,12 +17,22 @@ interface CartModalProps {
   isOpen: boolean
   onClose: () => void
   items: CartItem[]
-  onPlaceOrder: (rewardPointsRedeemed: number) => Promise<void>;
+  onPlaceOrder: (rewardPointsRedeemed: number) => Promise<void>
+  walletBalance: number  // New prop for current balance
 }
 
-export function CartModal({ isOpen, onClose, items, onPlaceOrder }: CartModalProps) {
+export function CartModal({
+  isOpen,
+  onClose,
+  items,
+  onPlaceOrder,
+  walletBalance,
+}: CartModalProps) {
   const [rewardPoints, setRewardPoints] = useState("0");
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
   const discount = Number(rewardPoints) * 0.5
   const total = subtotal - discount
 
@@ -81,6 +91,9 @@ export function CartModal({ isOpen, onClose, items, onPlaceOrder }: CartModalPro
               </SelectContent>
             </Select>
           </div>
+          <div className="mt-4 text-lg font-semibold">
+            Your Funds: ₹{walletBalance}
+          </div>
           <div className="border-t pt-4">
             <div className="flex justify-between font-bold text-xl">
               <span>Total:</span>
@@ -98,6 +111,8 @@ export function CartModal({ isOpen, onClose, items, onPlaceOrder }: CartModalPro
         </div>
       </DialogContent>
     </Dialog>
+    
   )
+  
 }
 

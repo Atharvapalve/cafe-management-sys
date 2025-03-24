@@ -114,7 +114,7 @@ export default function Dashboard() {
     });
   };
 
-    const handlePlaceOrder = async (rewardPointsRedeemed: number) => {
+  const handlePlaceOrder = async (rewardPointsRedeemed: number) => {
     try {
       // Fetch the latest user profile including wallet data.
       const currentUser = await getProfile();
@@ -127,8 +127,7 @@ export default function Dashboard() {
         0
       );
       // Check if sufficient balance exists.
-      const newBalance = currentUser.wallet.balance - total;
-      if (newBalance < 0) {
+      if (currentUser.wallet.balance < total) {
         throw new Error("Insufficient balance in wallet.");
       }
       // Prepare order payload.
@@ -139,6 +138,7 @@ export default function Dashboard() {
         })),
         rewardPointsRedeemed,
       };
+      
       // Place order via API.
       const orderResponse = await fetch(`${API_URL}/orders`, {
         method: "POST",
@@ -151,23 +151,20 @@ export default function Dashboard() {
         throw new Error(errorData.message || "Failed to place order.");
       }
       const orderData = await orderResponse.json();
-      // Fetch updated profile and update global state.
+      
+      // Fetch updated profile from the server to get the fresh wallet info.
       const updatedProfile = await getProfile();
       updateUser(updatedProfile);
-      // Calculate new reward points.
-      const newPoints =
-        currentUser.wallet.rewardPoints -
-        rewardPointsRedeemed +
-        orderData.order.rewardPointsEarned;
-      // Update last order state.
-      const lastOrderDetails: LastOrder = {
+      
+      // Build last order details using the updated wallet info.
+      const lastOrderDetails = {
         subtotal: orderData.order.subtotal,
         pointsRedeemed: rewardPointsRedeemed,
         total: orderData.order.total,
-        newBalance,
+        wallet: updatedProfile.wallet, // includes balance and rewardPoints
         pointsEarned: orderData.order.rewardPointsEarned,
-        newPoints,
       };
+      
       setLastOrder(lastOrderDetails);
       setIsCartOpen(false);
       setCartItems([]);
@@ -182,7 +179,6 @@ export default function Dashboard() {
       }
     }
   };
-
 
 
   const tabContent = {
@@ -314,11 +310,14 @@ export default function Dashboard() {
 
       {/* Modals */}
       <CartModal
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        items={cartItems}
-        onPlaceOrder={handlePlaceOrder}
-      />
+  isOpen={isCartOpen}
+  onClose={() => setIsCartOpen(false)}
+  items={cartItems}
+  onPlaceOrder={handlePlaceOrder}
+  walletBalance={user?.wallet?.balance || 0} // Ensure walletBalance is being passed here
+/>
+
+
     {lastOrder && (
   <SuccessModal
     isOpen={isSuccessOpen}
