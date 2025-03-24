@@ -127,51 +127,7 @@ export function ProfileCard() {
               )}
             </div>
           </div>
-          <div className="flex-1 space-y-4">
-            <div className="space-y-2">
-              <h4 className="font-semibold text-lg text-coffee-dark">Preferences</h4>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2">
-                  <Coffee className="h-5 w-5 text-coffee-accent" />
-                  {isEditing ? (
-                    <Input
-                      name="preferences.favoriteCoffee"
-                      value={editedUser?.preferences.favoriteCoffee || ""}
-                      onChange={handleInputChange}
-                      placeholder="Favorite coffee"
-                      className="border-coffee-medium"
-                    />
-                  ) : (
-                    <span>Favorite coffee: {user.preferences?.favoriteCoffee || "Not set"}</span>
-                  )}
-                </li>
-                <li className="flex items-center gap-2">
-                  <Droplet className="h-5 w-5 text-coffee-accent" />
-                  {isEditing ? (
-                    <Input
-                      name="preferences.preferredMilk"
-                      value={editedUser?.preferences.preferredMilk || ""}
-                      onChange={handleInputChange}
-                      placeholder="Preferred milk"
-                      className="border-coffee-medium"
-                    />
-                  ) : (
-                    <span>Preferred milk: {user.preferences?.preferredMilk || "Not set"}</span>
-                  )}
-                </li>
-                <li className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-coffee-accent" />
-                  <span>Rewards tier: {user.preferences?.rewardsTier}</span>
-                </li>
-              </ul>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold text-lg text-coffee-dark">Account Info</h4>
-              <p className="text-sm text-coffee-medium">
-                Member since: {user.memberSince ? new Date(user.memberSince).toLocaleDateString() : "N/A"}
-              </p>
-            </div>
-          </div>
+         
         </div>
         <div className="flex justify-end space-x-4 pt-4 border-t border-coffee-medium">
           {isEditing ? (
