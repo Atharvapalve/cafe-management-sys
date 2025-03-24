@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { updateOrderStatus } from "@/lib/api";
+import toast from "react-hot-toast";
 
 interface OrderItem {
   menuItem: {
@@ -35,53 +36,64 @@ interface Order {
 export function OrderManagement({ orders: initialOrders }: { orders: Order[] }) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [updatingOrder, setUpdatingOrder] = useState<string | null>(null);
-  // Track the update stage for each order
-  const [orderStages, setOrderStages] = useState<{
-    [orderId: string]: "pending" | "ready" | "done";
-  }>({});
+  // Keep track of the current stage for each order
+  const [orderStages, setOrderStages] = useState<{ [orderId: string]: "pending" | "ready" | "done" }>({});
 
+  // Update orders when initialOrders change (for example on first load)
   useEffect(() => {
     setOrders(initialOrders);
   }, [initialOrders]);
 
-  // Function to handle order status changes
+  // Optimistic UI update with notification
   const handleOrderAction = async (orderId: string) => {
+    console.log("Admin clicked update for order:", orderId); // Debug log for admin
+
     const currentStage = orderStages[orderId] || "pending";
 
     if (currentStage === "pending") {
       setUpdatingOrder(orderId);
       try {
-        await updateOrderStatus(orderId, "preparing");
+        // Optimistically update the UI
         setOrders((prevOrders) =>
           prevOrders.map((order) =>
             order._id === orderId ? { ...order, status: "preparing" } : order
           )
         );
         setOrderStages((prev) => ({ ...prev, [orderId]: "ready" }));
+        // Update on the server
+        await updateOrderStatus(orderId, "preparing");
+        console.log(`Order ${orderId} updated to preparing`); // Debug log for admin
+        toast.success("Order updated to preparing");
       } catch (error) {
         console.error("Failed to update status to preparing:", error);
+        toast.error("Failed to update order to preparing");
       } finally {
         setUpdatingOrder(null);
       }
     } else if (currentStage === "ready") {
       setUpdatingOrder(orderId);
       try {
-        await updateOrderStatus(orderId, "Ready");
+        // Optimistically update the UI
         setOrders((prevOrders) =>
           prevOrders.map((order) =>
             order._id === orderId ? { ...order, status: "Ready" } : order
           )
         );
         setOrderStages((prev) => ({ ...prev, [orderId]: "done" }));
+        // Update on the server
+        await updateOrderStatus(orderId, "Ready");
+        console.log(`Order ${orderId} updated to Ready`); // Debug log for admin
+        toast.success("Order updated to Ready");
       } catch (error) {
         console.error("Failed to update status to Ready:", error);
+        toast.error("Failed to update order to Ready");
       } finally {
         setUpdatingOrder(null);
       }
     }
   };
 
-  // Group orders by date (using locale date string)
+  // Group orders by their creation date (using locale date string)
   const groupedOrders = orders.reduce((acc: { [key: string]: Order[] }, order) => {
     const date = new Date(order.createdAt).toLocaleDateString();
     if (!acc[date]) {
@@ -95,7 +107,7 @@ export function OrderManagement({ orders: initialOrders }: { orders: Order[] }) 
   const computeTotalSales = (orders: Order[]) =>
     orders.reduce((total, order) => total + order.total, 0);
 
-  // Sort the dates in descending order
+  // Sort dates in descending order
   const sortedDates = Object.keys(groupedOrders).sort(
     (a, b) => new Date(b).getTime() - new Date(a).getTime()
   );
@@ -183,10 +195,10 @@ export function OrderManagement({ orders: initialOrders }: { orders: Order[] }) 
                               : buttonLabel}
                           </Button>
                         )}
-                        {order.status !== "pending" &&
-                          order.status !== "preparing" && (
-                            <Button disabled>{buttonLabel}</Button>
-                          )}
+                        {(order.status !== "pending" &&
+                          order.status !== "preparing") && (
+                          <Button disabled>{buttonLabel}</Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
