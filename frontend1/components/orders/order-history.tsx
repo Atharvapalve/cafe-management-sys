@@ -47,7 +47,7 @@ export function OrderHistory() {
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">Order History</h2>
       {orders.map((order) => (
-        <Card key={order._id} className="bg-[#E6DCC3]">
+        <Card key={order._id} className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-[#BCAAA4]">
           <CardHeader>
             <CardTitle>Order #{order._id.slice(-6)}</CardTitle>
           </CardHeader>

@@ -53,16 +53,24 @@ export async function updateProfile(updatedUser: Partial<User>) {
 }
 // Rest of your API functions remain the same
 export async function placeOrder(order: any) {
+  // Ensure rewardPointsRedeemed is included and set to 0
+  const orderWithPoints = { 
+    ...order, 
+    rewardPointsRedeemed: 0 
+  };
+
+  console.log("Placing order with data:", JSON.stringify(orderWithPoints, null, 2));
+
   const response = await fetch(`${API_URL}/orders`, {
     method: "POST",
     headers: buildHeaders(),
     credentials: "include",
-    body: JSON.stringify(order),
-    
+    body: JSON.stringify(orderWithPoints),
   });
+  
   if (!response.ok) {
     const errorData = await response.json();
-    
+    console.error("Order error:", errorData);
     throw new Error(errorData.message || "Failed to place order");
   }
   
@@ -84,7 +92,7 @@ export async function getProfile() {
 
   // ✅ Ensure wallet is initialized in case backend fails to set it
   if (!userData.wallet) {
-    userData.wallet = { balance: 100, rewardPoints: 0 };
+    userData.wallet = { balance: 100 };
   }
 
   return userData;

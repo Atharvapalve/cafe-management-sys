@@ -1,24 +1,19 @@
 "use client"
 
-import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { X } from "lucide-react"
-
-interface CartItem {
-  _id: string
-  name: string
-  quantity: number
-  price: number
-}
+import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react"
+import { CartItem } from "@/types/menu"
+import { useState } from "react"
+import { toast } from "sonner"
 
 interface CartModalProps {
   isOpen: boolean
   onClose: () => void
   items: CartItem[]
-  onPlaceOrder: (rewardPointsRedeemed: number) => Promise<void>
-  walletBalance: number  // New prop for current balance
+  onPlaceOrder: () => Promise<void>
+  walletBalance: number
+  setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>
 }
 
 export function CartModal({
@@ -27,92 +22,168 @@ export function CartModal({
   items,
   onPlaceOrder,
   walletBalance,
+  setCartItems,
 }: CartModalProps) {
-  const [rewardPoints, setRewardPoints] = useState("0");
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  const updateQuantity = (itemId: string, change: number) => {
+    setCartItems((prevItems) =>
+      prevItems.map((item) => {
+        if (item._id === itemId) {
+          const newQuantity = item.quantity + change
+          if (newQuantity <= 0) {
+            return item
+          }
+          return { ...item, quantity: newQuantity }
+        }
+        return item
+      })
+    )
+  }
+
+  const removeItem = (itemId: string) => {
+    setCartItems((prevItems) => prevItems.filter((item) => item._id !== itemId))
+    toast.success("Item removed from cart")
+  }
+
   const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + (item.price * item.quantity),
     0
-  );
-  const discount = Number(rewardPoints) * 0.5
-  const total = subtotal - discount
+  )
 
   const handlePlaceOrder = async () => {
-    const parsedRewardPoints = Number(rewardPoints);
+    if (subtotal > walletBalance) {
+      toast.error("Insufficient wallet balance")
+      return
+    }
 
-    // Validate rewardPoints
-    if (isNaN(parsedRewardPoints) || parsedRewardPoints < 0) {
-      console.error("Invalid reward points:", rewardPoints);
-      return alert("Please enter a valid number for reward points.");
+    if (items.length === 0) {
+      toast.error("Your cart is empty")
+      return
     }
-    
-  
+
+    setIsProcessing(true)
     try {
-      await onPlaceOrder(parsedRewardPoints);
-      onClose();
-      
+      await onPlaceOrder()
+      // Don't clear cart here as it's handled in the parent component
     } catch (error) {
-      console.error("Failed to place order:", error);
+      console.error("Failed to place order:", error)
+      toast.error("Failed to place order. Please try again.")
+    } finally {
+      setIsProcessing(false)
     }
-  };
+  }
+
+  const handleClose = () => {
+    if (!isProcessing) {
+      onClose()
+    }
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-coffee-light max-w-md">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[425px] bg-[#EFEBE9] border-[#8D6E63]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Checkout</DialogTitle>
-          
+          <DialogTitle className="text-[#5D4037] flex items-center gap-2">
+            <ShoppingBag className="h-5 w-5" />
+            Your Cart
+          </DialogTitle>
         </DialogHeader>
+
         <div className="space-y-4">
-          {items.map((item, index) => (
-            <div key={index} className="flex justify-between text-lg">
-              <span>
-                {item.name} x{item.quantity}
-              </span>
-              <span>₹{item.price * item.quantity}</span>
+          {items.length === 0 ? (
+            <div className="text-center py-8">
+              <ShoppingBag className="h-12 w-12 mx-auto mb-3 text-[#8D6E63] opacity-50" />
+              <h3 className="text-[#5D4037] font-medium mb-1">Your cart is empty</h3>
+              <p className="text-[#8D6E63] text-sm">Add some delicious items to get started</p>
             </div>
-          ))}
-          <div className="border-t pt-4">
-            <div className="flex justify-between font-semibold text-lg">
-              <span>Subtotal:</span>
-              <span>₹{subtotal}</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm">Redeem Reward Points (max 100)</label>
-            <Select value={rewardPoints} onValueChange={setRewardPoints}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[0, 10, 20, 50, 100].map((points) => (
-                  <SelectItem key={points} value={String(points)}>
-                    {points}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="mt-4 text-lg font-semibold">
-            Your Funds: ₹{walletBalance}
-          </div>
-          <div className="border-t pt-4">
-            <div className="flex justify-between font-bold text-xl">
-              <span>Total:</span>
-              <span>₹{total}</span>
-            </div>
-          </div>
-          <div className="flex gap-4 pt-4">
-            <Button variant="outline" onClick={onClose} className="flex-1">
-              Cancel
-            </Button>
-            <Button className="flex-1 bg-[#2C1810] text-[#E6DCC3] hover:bg-[#1F110B]" onClick={handlePlaceOrder}>
-              Confirm Order
-            </Button>
-          </div>
+          ) : (
+            <>
+              {items.map((item) => (
+                <div
+                  key={item._id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-white/50 border border-[#BCAAA4]"
+                >
+                  <div className="flex-1">
+                    <h4 className="font-medium text-[#5D4037]">{item.name}</h4>
+                    <div className="flex items-center gap-4 mt-2">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 border-[#8D6E63]"
+                          onClick={() => updateQuantity(item._id, -1)}
+                          disabled={item.quantity <= 1 || isProcessing}
+                        >
+                          <Minus className="h-4 w-4 text-[#8D6E63]" />
+                        </Button>
+                        <span className="w-8 text-center text-[#5D4037]">
+                          {item.quantity}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 border-[#8D6E63]"
+                          onClick={() => updateQuantity(item._id, 1)}
+                          disabled={isProcessing}
+                        >
+                          <Plus className="h-4 w-4 text-[#8D6E63]" />
+                        </Button>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-[#8D6E63] hover:text-red-500"
+                        onClick={() => removeItem(item._id)}
+                        disabled={isProcessing}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-[#5D4037]">
+                      ₹{(item.price * item.quantity).toFixed(2)}
+                    </p>
+                    <p className="text-sm text-[#8D6E63]">₹{item.price.toFixed(2)} each</p>
+                  </div>
+                </div>
+              ))}
+
+              <div className="pt-4 border-t border-[#BCAAA4]">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[#8D6E63]">Subtotal</span>
+                  <span className="font-medium text-[#5D4037]">₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-[#8D6E63]">Wallet Balance</span>
+                  <span className="font-medium text-[#5D4037]">₹{walletBalance.toFixed(2)}</span>
+                </div>
+                {subtotal > walletBalance && (
+                  <p className="text-red-500 text-sm mb-4">
+                    Insufficient wallet balance. Please add funds to continue.
+                  </p>
+                )}
+                <Button
+                  className="w-full bg-[#5D4037] hover:bg-[#4E342E] text-white"
+                  onClick={handlePlaceOrder}
+                  disabled={isProcessing || subtotal > walletBalance || items.length === 0}
+                >
+                  {isProcessing ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Processing...
+                    </div>
+                  ) : (
+                    `Place Order • ₹${subtotal.toFixed(2)}`
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
-    
   )
-  
 }
 

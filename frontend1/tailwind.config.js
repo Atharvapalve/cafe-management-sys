@@ -8,11 +8,15 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        playfair: ['Playfair Display', 'serif'],
+        poppins: ['Poppins', 'sans-serif'],
+      },
       colors: {
         // Coffee Theme Colors
         "coffee-dark": "#2C1810", // Dark brown for backgrounds
         "coffee-medium": "#3D261C", // Medium brown for hover states
-        "coffee-light": "#E6DCC3", // Beige/cream for cards and content
+        "coffee-light": "#EBE5E3", // Beige/cream for cards and content
         "coffee-accent": "#8B4513", // Accent brown
         "coffee-cream": "#F5F5DC", // Light cream for subtle highlights
         border: "hsl(var(--border))",
@@ -56,6 +60,6 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [require("@tailwindcss/forms")],
 }
 

@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Coffee } from "lucide-react"
 
 export function LoginForm() {
   const [email, setEmail] = useState("")
@@ -20,26 +21,11 @@ export function LoginForm() {
   const { login } = useAuth()
 
   useEffect(() => {
-    console.log("Component mounted, checking video status...")
-    
-    // Debug video element
     if (videoRef.current) {
-      console.log("Video element found:", {
-        duration: videoRef.current.duration,
-        paused: videoRef.current.paused,
-        currentSrc: videoRef.current.currentSrc,
-        readyState: videoRef.current.readyState,
-        networkState: videoRef.current.networkState,
-      })
-
-      // Try to load the video manually
       videoRef.current.src = "/videos/coffee-bg.mp4"
       videoRef.current.load()
-    } else {
-      console.log("Video element not found in ref")
     }
 
-    // Cleanup function
     return () => {
       if (videoRef.current) {
         videoRef.current.src = ""
@@ -49,30 +35,11 @@ export function LoginForm() {
   }, [])
 
   const handleVideoLoad = () => {
-    console.log("Video loaded successfully!")
-    if (videoRef.current) {
-      console.log("Video metadata:", {
-        duration: videoRef.current.duration,
-        videoWidth: videoRef.current.videoWidth,
-        videoHeight: videoRef.current.videoHeight,
-        currentSrc: videoRef.current.currentSrc,
-        readyState: videoRef.current.readyState,
-      })
-    }
     setIsVideoLoaded(true)
   }
 
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
-    console.error("Video loading error occurred")
-    const video = e.target as HTMLVideoElement
-    console.log("Video element error state:", {
-      readyState: video.readyState,
-      networkState: video.networkState,
-      error: video.error?.code,
-      errorMessage: video.error?.message,
-      src: video.src,
-      currentSrc: video.currentSrc,
-    })
+    console.error("Video loading error:", e)
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -87,7 +54,7 @@ export function LoginForm() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#2C1810]">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#5D4037]">
       {/* Background Video */}
       <video
         ref={videoRef}
@@ -106,22 +73,26 @@ export function LoginForm() {
 
       {/* Overlay */}
       <div 
-        className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[#5D4037]/60 backdrop-blur-[2px]"
         style={{ zIndex: 1 }}
       ></div>
 
       {/* Login Form */}
       <div 
-        className="relative w-[450px] p-10 rounded-2xl bg-white/90 backdrop-blur-md shadow-2xl transform hover:scale-[1.02] transition-all duration-300"
+        className="relative w-[450px] p-10 rounded-2xl glass-effect transform hover:scale-[1.02] transition-all duration-300"
         style={{ zIndex: 2 }}
       >
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-[#2C1810] mb-2">Welcome Back</h2>
-          <p className="text-gray-600">Sign in to your account</p>
+          <div className="flex justify-center mb-4">
+            <Coffee size={48} className="text-[#5D4037]" />
+          </div>
+          <h2 className="text-4xl font-bold text-[#5D4037] mb-2">Welcome Back</h2>
+          <p className="text-[#8D6E63]">Sign in to your account</p>
         </div>
+
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-medium text-[#2C1810]">
+            <label htmlFor="email" className="block text-sm font-medium text-[#5D4037]">
               Email Address
             </label>
             <Input
@@ -129,13 +100,14 @@ export function LoginForm() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2C1810] focus:border-transparent transition-all duration-200"
+              className="coffee-input"
               placeholder="Enter your email"
               required
             />
           </div>
+
           <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-medium text-[#2C1810]">
+            <label htmlFor="password" className="block text-sm font-medium text-[#5D4037]">
               Password
             </label>
             <Input
@@ -143,17 +115,18 @@ export function LoginForm() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2C1810] focus:border-transparent transition-all duration-200"
+              className="coffee-input"
               placeholder="Enter your password"
               required
             />
           </div>
+
           <div className="space-y-2">
-            <label htmlFor="userType" className="block text-sm font-medium text-[#2C1810]">
+            <label htmlFor="userType" className="block text-sm font-medium text-[#5D4037]">
               Login As
             </label>
             <Select value={userType} onValueChange={setUserType}>
-              <SelectTrigger className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2C1810] focus:border-transparent">
+              <SelectTrigger className="coffee-input">
                 <SelectValue placeholder="Select user type" />
               </SelectTrigger>
               <SelectContent>
@@ -162,23 +135,26 @@ export function LoginForm() {
               </SelectContent>
             </Select>
           </div>
+
           {error && (
-            <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm">
+            <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-sm">
               {error}
             </div>
           )}
+
           <Button
             type="submit"
-            className="w-full bg-[#2C1810] hover:bg-[#1F110B] text-white py-3 rounded-lg font-medium transition-colors duration-200"
+            className="coffee-button w-full py-3"
           >
             Sign In
           </Button>
-          <div className="mt-6 text-center text-gray-600">
+
+          <div className="mt-6 text-center text-[#8D6E63]">
             Don't have an account?{" "}
             <Button
               variant="link"
               onClick={() => router.push("/register")}
-              className="text-[#2C1810] hover:text-[#1F110B] font-medium"
+              className="coffee-link font-medium"
             >
               Create Account
             </Button>
