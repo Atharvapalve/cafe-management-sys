@@ -22,7 +22,8 @@ interface MenuGridProps {
 }
 
 export function MenuGrid({ onAddToCart }: MenuGridProps) {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [allMenuItems, setAllMenuItems] = useState<MenuItem[]>([])
+  const [displayedItems, setDisplayedItems] = useState<MenuItem[]>([])
   const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
   const [filters, setFilters] = useState({
     category: "",
@@ -30,24 +31,68 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
     maxPrice: "",
     search: "",
   })
-  const [selectedCategory, setSelectedCategory] = useState("All")
   const [isLoading, setIsLoading] = useState(true)
 
+  // Fetch all menu items on component mount or when server filters change
   useEffect(() => {
-    fetchFilteredMenuItems()
-  }, [filters])
+    fetchMenuItems()
+  }, [filters.category, filters.minPrice, filters.maxPrice])
 
-  const fetchFilteredMenuItems = async () => {
+  // Apply client-side filters whenever they change
+  useEffect(() => {
+    applyFilters()
+  }, [filters.search, allMenuItems])
+
+  const fetchMenuItems = async () => {
     try {
       setIsLoading(true)
-      const params = new URLSearchParams(filters as Record<string, string>)
+      // Only send category and price to backend
+      const params = new URLSearchParams()
+      if (filters.category && filters.category !== "All") {
+        params.append('category', filters.category)
+      }
+      if (filters.minPrice) params.append('minPrice', filters.minPrice)
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice)
+      
+      console.log("Fetching with params:", params.toString())
       const items = await getMenuItems(params.toString())
-      setMenuItems(items)
+      console.log("Fetched items:", items.length)
+      setAllMenuItems(items)
+      setDisplayedItems(items) // Initialize displayed items
     } catch (error) {
       console.error("Failed to fetch menu items:", error)
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Apply client-side filters (search only)
+  const applyFilters = () => {
+    if (!allMenuItems.length) return
+    
+    let filteredItems = [...allMenuItems]
+    
+    // Apply search filter - search only in names for more accuracy
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase().trim()
+      filteredItems = filteredItems.filter(item => {
+        // For single letter searches, only match the beginning of words
+        if (searchTerm.length === 1) {
+          const words = item.name.toLowerCase().split(' ')
+          return words.some(word => word.startsWith(searchTerm))
+        }
+        
+        // For longer searches, allow matches anywhere in the name but not description
+        return item.name.toLowerCase().includes(searchTerm)
+      })
+    }
+    
+    setDisplayedItems(filteredItems)
+  }
+
+  // Handle filter changes
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }))
   }
 
   const updateQuantity = (_id: string, delta: number) => {
@@ -101,7 +146,7 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
                   type="text"
                   placeholder="Search menu items..."
                   value={filters.search}
-                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
                   className="pl-10 pr-4 py-2 w-full rounded-lg border-2 border-[#BCAAA4] focus:border-[#8D6E63] focus:ring-[#8D6E63] text-[#5D4037] placeholder-[#A1887F]"
                 />
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#8D6E63] w-4 h-4" />
@@ -110,7 +155,7 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
               {/* Category Filter */}
               <Select
                 value={filters.category}
-                onValueChange={(value) => setFilters({ ...filters, category: value === "All" ? "" : value })}
+                onValueChange={(value) => handleFilterChange('category', value === "All" ? "" : value)}
               >
                 <SelectTrigger className="w-[180px] border-2 border-[#BCAAA4] text-[#5D4037]">
                   <SelectValue placeholder="Category" />
@@ -129,7 +174,7 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
                   type="number"
                   placeholder="Min ₹"
                   value={filters.minPrice}
-                  onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
+                  onChange={(e) => handleFilterChange('minPrice', e.target.value)}
                   className="w-24 border-2 border-[#BCAAA4] text-[#5D4037] placeholder-[#A1887F]"
                 />
                 <span className="text-[#8D6E63]">to</span>
@@ -137,7 +182,7 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
                   type="number"
                   placeholder="Max ₹"
                   value={filters.maxPrice}
-                  onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
+                  onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
                   className="w-24 border-2 border-[#BCAAA4] text-[#5D4037] placeholder-[#A1887F]"
                 />
               </div>
@@ -146,7 +191,7 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
 
           {/* Menu Items Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {menuItems.map((item) => (
+            {displayedItems.map((item) => (
               <div 
                 key={item._id} 
                 className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
@@ -221,7 +266,7 @@ export function MenuGrid({ onAddToCart }: MenuGridProps) {
           )}
 
           {/* Empty State */}
-          {!isLoading && menuItems.length === 0 && (
+          {!isLoading && displayedItems.length === 0 && (
             <div className="text-center py-12">
               <h3 className="text-xl font-medium text-[#5D4037] mb-2">No items found</h3>
               <p className="text-[#8D6E63]">Try adjusting your filters or search terms</p>
