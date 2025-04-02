@@ -19,14 +19,12 @@ export interface User {
   role: string;
   wallet: {
     balance: number;
-    rewardPoints: number;
   };
   memberSince?: string;
   phone?: string;
   preferences?: {
     favoriteCoffee?: string;
     preferredMilk?: string;
-    rewardsTier?: string;
   };
 }
 
@@ -66,7 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       data.user.wallet = {
         balance: data.user.wallet?.balance ?? 0,
-        rewardPoints: data.user.wallet?.rewardPoints ?? 0,
       };
 
       localStorage.setItem("token", data.token);
@@ -104,7 +101,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...updatedUser,
         wallet: {
           balance: updatedUser.wallet?.balance ?? user.wallet.balance,
-          rewardPoints: updatedUser.wallet?.rewardPoints ?? user.wallet.rewardPoints,
         },
       };
 

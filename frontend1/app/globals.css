@@ -3,84 +3,118 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0; /* Dark */
-  --background-start-rgb: 214, 219, 220; /* Cream */
-  --background-end-rgb: 255, 255, 255;
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 222.2 47.4% 11.2%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 222.2 84% 4.9%;
-  --radius: 0.5rem;
+  --font-playfair: var(--font-playfair);
+  --font-poppins: var(--font-poppins);
+
+  /* Coffee Theme Colors */
+  --coffee-dark: #5D4037;
+  --coffee-medium: #8D6E63;
+  --coffee-light: #BCAAA4;
+  --coffee-lightest: #D7CCC8;
+  --coffee-cream: #EFEBE9;
+  --coffee-accent: #3E2723;
+  
+  /* Background image for pages */
+  --coffee-bg-opacity: 0.6;
+  --coffee-bg-blur: 3px;
 }
 
-.dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 210 40% 98%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 212.7 26.8% 83.9%;
-}
-
+/* Basic styles */
+html,
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(to bottom, transparent, rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
-}
-/* globals.css */
-.menu-item {
-  max-width: 250px; /* Adjust the width as needed */
-  margin-right: 16px; /* Add some space between cards */
+  min-height: 100vh;
+  padding: 0;
+  margin: 0;
 }
 
-.menu-item .card-content {
-  padding: 16px; /* Adjust padding inside the card */
+/* Global coffee styling helpers */
+.coffee-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
 }
 
-.menu-item .card-title {
-  font-size: 18px; /* Adjust title size */
+.glass-effect {
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--coffee-light);
+  border-radius: 1rem;
 }
 
-.menu-item .description {
-  font-size: 14px; /* Adjust description size */
+.coffee-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  background-color: var(--coffee-light);
+  color: var(--coffee-accent);
 }
 
-.menu-item .price {
-  font-size: 16px; /* Adjust price size */
+@layer base {
+  body {
+    @apply antialiased text-[#5D4037];
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-playfair font-bold;
+  }
+
+  p, span, a, button, input, select, textarea {
+    @apply font-poppins;
+  }
 }
 
-.menu-item .quantity-buttons {
-  display: flex;
-  align-items: center;
+@layer components {
+  .glass-effect {
+    @apply bg-white/80 backdrop-blur-sm border border-[#BCAAA4];
+  }
+
+  .coffee-card {
+    @apply bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300;
+  }
+
+  .coffee-input {
+    @apply pl-4 pr-4 py-2 w-full rounded-lg border-2 border-[#BCAAA4] focus:border-[#8D6E63] focus:ring-[#8D6E63] text-[#5D4037] placeholder-[#A1887F];
+  }
+
+  .coffee-button {
+    @apply px-6 py-2 rounded-lg bg-[#5D4037] hover:bg-[#8D6E63] text-white transition-colors duration-200 disabled:bg-[#D7CCC8] disabled:text-[#5D4037] disabled:cursor-not-allowed;
+  }
+
+  .coffee-button-outline {
+    @apply px-6 py-2 rounded-lg border-2 border-[#5D4037] text-[#5D4037] hover:bg-[#5D4037] hover:text-white transition-colors duration-200;
+  }
+
+  .coffee-link {
+    @apply text-[#8D6E63] hover:text-[#5D4037] transition-colors duration-200 underline-offset-4 hover:underline;
+  }
+
+  .coffee-badge {
+    @apply px-3 py-1 rounded-full text-sm font-medium bg-[#D7CCC8] text-[#5D4037];
+  }
+
+  .coffee-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
 }
 
-.menu-item .quantity-buttons button {
-  margin: 0 8px; /* Space between quantity buttons */
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--coffee-lightest);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--coffee-medium);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--coffee-dark);
 }

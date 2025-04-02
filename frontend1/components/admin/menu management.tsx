@@ -11,7 +11,6 @@ export interface MenuItem {
   name: string;
   price: number;
   category: string;
-  rewardPoints: number;
   image?: string;
 }
 
@@ -23,7 +22,7 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
   }, [items]);
   
   // New item state for adding an item
-  const [newItem, setNewItem] = useState({ name: "", price: "", category: "", rewardPoints: "" });
+  const [newItem, setNewItem] = useState({ name: "", price: "", category: "" });
   const [newImage, setNewImage] = useState<File | null>(null);
   
   // State for tracking which item is in editing mode
@@ -37,14 +36,15 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
       formData.append("name", newItem.name);
       formData.append("price", newItem.price);
       formData.append("category", newItem.category);
-      formData.append("rewardPoints", newItem.rewardPoints);
+      // Add default rewardPoints value of 0 for backward compatibility with backend
+      formData.append("rewardPoints", "0");
       if (newImage) {
         formData.append("image", newImage);
       }
       const addedItem = await addMenuItem(formData);      // Refresh menu items
       setMenuItems((prev) => [...prev, addedItem]);
       // Reset the input fields
-      setNewItem({ name: "", price: "", category: "", rewardPoints: "" });
+      setNewItem({ name: "", price: "", category: "" });
       setNewImage(null);
     }catch (error) {
       console.error("Failed to add menu item:", error)
@@ -71,14 +71,13 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
       if (updatedItem.name) formData.append("name", updatedItem.name);
       if (updatedItem.price !== undefined) formData.append("price", updatedItem.price.toString());
       if (updatedItem.category) formData.append("category", updatedItem.category);
-      if (updatedItem.rewardPoints !== undefined) {
-        formData.append("rewardPoints", updatedItem.rewardPoints.toString());
-      }
+      // Add default rewardPoints value of 0 for backward compatibility with backend
+      formData.append("rewardPoints", "0");
       if (editingImage) {
         formData.append("image", editingImage);
       }
       console.log("Updating menu item with ID:", id);
-      console.log("FormData contents:",  Array.from(formData.entries())); // Log data being sent
+      console.log("FormData contents:", Array.from(formData.entries())); // Log data being sent
       const response = await updateMenuItem(id, formData);
       setMenuItems((prev) =>
         prev.map((item) => (item._id === id ? { ...item, ...updatedItem, image: response.image } : item))
@@ -121,27 +120,20 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
           value={newItem.category}
           onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
         />
-        <Input
-          placeholder="Reward Points"
-          type="number"
-          value={newItem.rewardPoints}
-          onChange={(e) => setNewItem({ ...newItem, rewardPoints: e.target.value })}
-        />
          {/* File input for image selection */}
-  <Input
-    type="file"
-    accept="image/*"
-    onChange={(e) => setNewImage(e.target.files ? e.target.files[0] : null)}
-  />
-  <Button onClick={handleAddItem}>Add Item</Button>
-</div>
+        <Input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setNewImage(e.target.files ? e.target.files[0] : null)}
+        />
+        <Button onClick={handleAddItem}>Add Item</Button>
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Price</TableHead>
             <TableHead>Category</TableHead>
-            <TableHead>Reward Points</TableHead>
             <TableHead>Image</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -180,19 +172,6 @@ export function MenuManagement({ items }: { items: MenuItem[] }) {
                   />
                 ) : (
                   item.category
-                )}
-              </TableCell>
-              <TableCell>
-                {editingId === item._id ? (
-                  <Input
-                    type="number"
-                    value={editingData.rewardPoints || ""}
-                    onChange={(e) =>
-                      setEditingData({ ...editingData, rewardPoints: parseInt(e.target.value, 10) })
-                    }
-                  />
-                ) : (
-                  item.rewardPoints
                 )}
               </TableCell>
               <TableCell>

@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import io from "socket.io-client";
 import useOrderStatusListener from "@/hooks/useOrderStatusListener"; // This hook must be defined in /hooks/useOrderStatusListener.ts
 
@@ -22,12 +22,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface LastOrder {
+  items: CartItem[];
   subtotal: number;
-  pointsRedeemed: number;
   total: number;
   newBalance: number;
-  pointsEarned: number;
-  newPoints: number;
 }
 
 interface OrderItem {
@@ -50,12 +48,15 @@ export interface MenuItem {
   _id: string;
   name: string;
   price: number;
-  rewardPoints: number;
+  category: string;
   description?: string;
-  category?: string;
+  image?: string;
 }
 
-export interface CartItem extends MenuItem {
+export interface CartItem {
+  _id: string;
+  name: string;
+  price: number;
   quantity: number;
 }
 
@@ -75,7 +76,7 @@ export default function Dashboard() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  const [lastOrder, setLastOrder] = useState<any>(null);
+  const [lastOrder, setLastOrder] = useState<LastOrder | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Redirect to login if user is not authenticated
@@ -117,64 +118,57 @@ export default function Dashboard() {
       }
       return [...prevItems, { ...item, quantity }];
     });
+    setIsCartOpen(true); // Open cart when adding items
   };
 
-  const handlePlaceOrder = async (rewardPointsRedeemed: number) => {
+  const handlePlaceOrder = async () => {
     try {
-      // Fetch the latest user profile including wallet data.
       const currentUser = await getProfile();
       if (!currentUser.wallet || typeof currentUser.wallet.balance !== "number") {
         throw new Error("Wallet data is missing or invalid.");
       }
-      // Calculate total order amount.
-      const total = cartItems.reduce(
+
+      const subtotal = cartItems.reduce(
         (sum, item) => sum + item.price * item.quantity,
         0
       );
-      if (currentUser.wallet.balance < total) {
+
+      if (currentUser.wallet.balance < subtotal) {
         throw new Error("Insufficient balance in wallet.");
       }
+
       const orderDetails = {
         items: cartItems.map((item) => ({
           menuItemId: item._id,
           quantity: item.quantity,
         })),
-        rewardPointsRedeemed,
       };
 
-      const orderResponse = await fetch(`${API_URL}/orders`, {
-        method: "POST",
-        headers: buildHeaders(),
-        credentials: "include",
-        body: JSON.stringify(orderDetails),
-      });
-      if (!orderResponse.ok) {
-        const errorData = await orderResponse.json();
-        throw new Error(errorData.message || "Failed to place order.");
-      }
-      const orderData = await orderResponse.json();
+      const orderData = await placeOrder(orderDetails);
+      
       const updatedProfile = await getProfile();
+      
+      if (!updatedProfile) {
+        throw new Error("Failed to get updated profile after order.");
+      }
+
       updateUser(updatedProfile);
+
       const lastOrderDetails = {
-        subtotal: orderData.order.subtotal,
-        pointsRedeemed: rewardPointsRedeemed,
-        total: orderData.order.total,
-        wallet: updatedProfile.wallet,
-        pointsEarned: orderData.order.rewardPointsEarned,
+        items: cartItems,
+        subtotal: subtotal,
+        total: subtotal,
+        newBalance: updatedProfile.wallet?.balance || 0,
       };
+
       setLastOrder(lastOrderDetails);
       setIsCartOpen(false);
       setCartItems([]);
-      toast.success("Your order was placed successfully!");
+      toast.success("Order placed successfully!");
       setIsSuccessOpen(true);
     } catch (error) {
-      if (error instanceof Error) {
-        console.error("Failed to place order:", error.message);
-        alert(`Failed to place order: ${error.message}`);
-      } else {
-        console.error("An unknown error occurred:", error);
-        alert("An unknown error occurred while placing the order.");
-      }
+      console.error("Failed to place order:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to place order");
     }
   };
 
@@ -183,240 +177,284 @@ export default function Dashboard() {
     menu: <MenuGrid items={menuItems} onAddToCart={handleAddToCart} />,
     wallet: <WalletCard />,
     profile: <ProfileCard />,
-    orders: <OrderHistory currentUserId={user?.id || ""} />,
+    orders: <OrderHistory />,
   };
 
+  useEffect(() => {
+    // Set dynamic values here
+  }, []);
+
   return (
-    <div className="flex h-screen bg-[#F5F5DC]">
-      {/* Sidebar for larger screens */}
-      <aside className="hidden md:flex flex-col w-64 bg-[#2C1810] text-[#E6DCC3] p-6">
-        <h1 className="text-2xl font-bold mb-8">Cafe Manager</h1>
-        <nav className="space-y-4">
-          <Button
-            variant={activeTab === "menu" ? "default" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => setActiveTab("menu")}
-          >
-            <Coffee className="mr-2 h-4 w-4" /> Menu
-          </Button>
-          <Button
-            variant={activeTab === "wallet" ? "default" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => setActiveTab("wallet")}
-          >
-            <Wallet className="mr-2 h-4 w-4" /> Wallet
-          </Button>
-          <Button
-            variant={activeTab === "profile" ? "default" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => setActiveTab("profile")}
-          >
-            <User className="mr-2 h-4 w-4" /> Profile
-          </Button>
-          <Button
-            variant={activeTab === "orders" ? "default" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => setActiveTab("orders")}
-          >
-            <ShoppingBag className="mr-2 h-4 w-4" /> Orders
-          </Button>
-        </nav>
-      </aside>
+    <div className="min-h-screen">
+      {/* Navigation Bar */}
+      <nav className="bg-[#5D4037] text-white shadow-lg sticky top-0 z-50">
+        <div className="coffee-container">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <Coffee className="h-8 w-8" />
+              <h1 className="text-2xl font-bold">Café Delight</h1>
+            </div>
+            
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-6">
+              <Button
+                variant="ghost"
+                onClick={() => setActiveTab("menu")}
+                className={`text-white hover:text-[#BCAAA4] ${
+                  activeTab === "menu" ? "border-b-2 border-[#BCAAA4]" : ""
+                }`}
+              >
+                <Coffee className="mr-2 h-4 w-4" /> Menu
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setActiveTab("wallet")}
+                className={`text-white hover:text-[#BCAAA4] ${
+                  activeTab === "wallet" ? "border-b-2 border-[#BCAAA4]" : ""
+                }`}
+              >
+                <Wallet className="mr-2 h-4 w-4" /> Wallet
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setActiveTab("orders")}
+                className={`text-white hover:text-[#BCAAA4] ${
+                  activeTab === "orders" ? "border-b-2 border-[#BCAAA4]" : ""
+                }`}
+              >
+                <ShoppingBag className="mr-2 h-4 w-4" /> Orders
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setActiveTab("profile")}
+                className={`text-white hover:text-[#BCAAA4] ${
+                  activeTab === "profile" ? "border-b-2 border-[#BCAAA4]" : ""
+                }`}
+              >
+                <User className="mr-2 h-4 w-4" /> Profile
+              </Button>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        {/* Mobile header */}
-        <header className="md:hidden bg-[#2C1810] text-[#E6DCC3] p-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold">Cafe Manager</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            <MenuIcon className="h-6 w-6" />
-          </Button>
-        </header>
+              {/* Cart Button */}
+              <Button
+                variant="ghost"
+                onClick={() => setIsCartOpen(true)}
+                className="relative text-white hover:text-[#BCAAA4]"
+              >
+                <ShoppingBag className="h-5 w-5" />
+                {cartItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#8D6E63] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartItems.length}
+                  </span>
+                )}
+              </Button>
+            </div>
 
-        {/* Mobile menu */}
-        <AnimatePresence>
-          {isMobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: -50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -50 }}
-              className="md:hidden bg-[#2C1810] text-[#E6DCC3] p-4"
-            >
-              <nav className="space-y-2">
-                <Button
-                  variant={activeTab === "menu" ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setActiveTab("menu");
-                    setIsMobileMenuOpen(false);
-                  }}
-                >
-                  <Coffee className="mr-2 h-4 w-4" /> Menu
-                </Button>
-                <Button
-                  variant={activeTab === "wallet" ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setActiveTab("wallet");
-                    setIsMobileMenuOpen(false);
-                  }}
-                >
-                  <Wallet className="mr-2 h-4 w-4" /> Wallet
-                </Button>
-                <Button
-                  variant={activeTab === "profile" ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setActiveTab("profile");
-                    setIsMobileMenuOpen(false);
-                  }}
-                >
-                  <User className="mr-2 h-4 w-4" /> Profile
-                </Button>
-                <Button
-                  variant={activeTab === "orders" ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setActiveTab("orders");
-                    setIsMobileMenuOpen(false);
-                  }}
-                >
-                  <ShoppingBag className="mr-2 h-4 w-4" /> Orders
-                </Button>
-              </nav>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Tab content */}
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-6 text-[#2C1810]">
-            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-          </h2>
-          {tabContent[activeTab as keyof typeof tabContent]}
+            {/* Mobile Menu Button */}
+            <div className="md:hidden flex items-center gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => setIsCartOpen(true)}
+                className="relative text-white hover:text-[#BCAAA4]"
+              >
+                <ShoppingBag className="h-5 w-5" />
+                {cartItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#8D6E63] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartItems.length}
+                  </span>
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-white"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              >
+                <MenuIcon className="h-6 w-6" />
+              </Button>
+            </div>
+          </div>
         </div>
+      </nav>
+
+      {/* Mobile Navigation Menu */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="md:hidden bg-[#5D4037] text-white"
+          >
+            <div className="coffee-container py-4 space-y-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setActiveTab("menu");
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full text-white hover:text-[#BCAAA4] justify-start"
+              >
+                <Coffee className="mr-2 h-4 w-4" /> Menu
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setActiveTab("wallet");
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full text-white hover:text-[#BCAAA4] justify-start"
+              >
+                <Wallet className="mr-2 h-4 w-4" /> Wallet
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setActiveTab("orders");
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full text-white hover:text-[#BCAAA4] justify-start"
+              >
+                <ShoppingBag className="mr-2 h-4 w-4" /> Orders
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setActiveTab("profile");
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full text-white hover:text-[#BCAAA4] justify-start"
+              >
+                <User className="mr-2 h-4 w-4" /> Profile
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Content */}
+      <main className="coffee-container py-8">
+        {activeTab === "menu" || activeTab === "wallet" || activeTab === "profile" ? (
+          // When menu, wallet, or profile tab is active, don't show the heading or extra container
+          <div>
+            {tabContent[activeTab as keyof typeof tabContent]}
+          </div>
+        ) : (
+          // For other tabs, keep the original heading and container
+          <div className="glass-effect rounded-2xl p-6">
+            <h2 className="text-2xl font-bold mb-6 text-[#2C1810]">
+              {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+            </h2>
+            {tabContent[activeTab as keyof typeof tabContent]}
+          </div>
+        )}
       </main>
 
-      {/* Cart button */}
-      <Button
-        className="fixed bottom-4 right-4 bg-[#2C1810] text-[#E6DCC3] hover:bg-[#1F110B]"
-        onClick={() => setIsCartOpen(true)}
-      >
-        <ShoppingBag className="mr-2 h-4 w-4" />
-        Cart ({cartItems.length})
-      </Button>
-
-      {/* Modals */}
+      {/* Cart Modal */}
       <CartModal
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
         items={cartItems}
         onPlaceOrder={handlePlaceOrder}
         walletBalance={user?.wallet?.balance || 0}
+        setCartItems={setCartItems}
       />
 
-      {lastOrder && (
-        <SuccessModal
-          isOpen={isSuccessOpen}
-          onClose={() => setIsSuccessOpen(false)}
-          orderDetails={{
-            items: lastOrder.items || [],
-            subtotal: lastOrder.subtotal || 0,
-            pointsRedeemed: lastOrder.rewardPointsRedeemed || 0,
-            total: lastOrder.total || 0,
-            newBalance: lastOrder.wallet?.balance || 0,
-            pointsEarned: lastOrder.rewardPointsEarned || 0,
-            newPoints: lastOrder.wallet?.rewardPoints || 0,
-          }}
-        />
-      )}
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={isSuccessOpen}
+        onClose={() => {
+          setIsSuccessOpen(false);
+          setActiveTab("orders"); // Switch to orders tab after successful order
+        }}
+        orderDetails={lastOrder || {
+          items: [],
+          subtotal: 0,
+          total: 0,
+          newBalance: 0,
+        }}
+      />
     </div>
   );
 }
 
-export function OrderHistory({ currentUserId }: { currentUserId: string }) {
+function OrderHistory() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Use our order status listener hook
-  const orderUpdates = useOrderStatusListener(currentUserId);
-
-  useEffect(() => {
-    if (orderUpdates && orderUpdates.length > 0) {
-      orderUpdates.forEach((update: any) => {
-        toast.success(`Order ${update.orderId.slice(-6)} status updated to ${update.status}`);
-        // Optionally update local state for that order
-        setOrders((prevOrders) =>
-          prevOrders.map((order) =>
-            order._id === update.orderId ? { ...order, status: update.status } : order
-          )
-        );
-      });
-    }
-  }, [orderUpdates]);
 
   useEffect(() => {
     async function fetchOrders() {
       try {
         const fetchedOrders = await getOrderHistory();
-        console.log("Fetched order history:", fetchedOrders);
         setOrders(fetchedOrders);
       } catch (error) {
         console.error("Failed to fetch order history:", error);
+        toast.error("Failed to load order history");
       } finally {
         setIsLoading(false);
       }
     }
     fetchOrders();
-
-    const socket = io(SOCKET_SERVER_URL);
-    socket.on("orderStatusUpdated", (data: any) => {
-      setOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order._id === data.orderId ? { ...order, status: data.status } : order
-        )
-      );
-      toast.success(`Your order ${data.orderId.slice(-6)} status is now ${data.status}`);
-    });
-
-    return () => {
-      socket.off("orderStatusUpdated");
-      socket.disconnect();
-    };
   }, []);
 
   if (isLoading) {
-    return <div>Loading order history...</div>;
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5D4037]"></div>
+      </div>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <ShoppingBag className="h-12 w-12 mx-auto mb-3 text-[#8D6E63] opacity-50" />
+        <h3 className="text-xl font-medium text-[#5D4037] mb-2">No orders yet</h3>
+        <p className="text-[#8D6E63]">Your order history will appear here</p>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h2>Order History</h2>
+    <div className="space-y-4">
       {orders.map((order) => (
-        <Card key={order._id}>
-          <CardHeader>
-            <CardTitle>Order #{order._id.slice(-6)}</CardTitle>
+        <Card key={order._id} className="overflow-hidden">
+          <CardHeader className="bg-[#5D4037]/5">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-[#5D4037]">
+                Order #{order._id.slice(-6)}
+              </CardTitle>
+              <span className="coffee-badge">
+                {order.status}
+              </span>
+            </div>
           </CardHeader>
-          <CardContent>
-            {order.items.map((item, index) => (
-              <div key={index}>
-                {item.menuItem ? (
-                  <>
-                    {item.menuItem.name} x{item.quantity} ₹
-                    {(item.menuItem.price * item.quantity).toFixed(2)}
-                  </>
-                ) : (
-                  <span className="text-red-500">[Item Deleted]</span>
-                )}
+          <CardContent className="pt-4">
+            <div className="space-y-4">
+              {order.items.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex justify-between items-center text-[#8D6E63]"
+                >
+                  <div className="flex-1">
+                    <p className="font-medium text-[#5D4037]">
+                      {item.menuItem?.name || "Removed Item"}
+                    </p>
+                    <p className="text-sm">Quantity: {item.quantity}</p>
+                  </div>
+                  <p className="font-medium">
+                    ₹{((item.menuItem?.price || 0) * item.quantity).toFixed(2)}
+                  </p>
+                </div>
+              ))}
+              <div className="pt-4 border-t border-[#BCAAA4]">
+                <div className="flex justify-between items-center">
+                  <p className="font-medium text-[#5D4037]">Total</p>
+                  <p className="font-bold text-[#5D4037]">₹{order.total.toFixed(2)}</p>
+                </div>
+                <p className="text-sm text-[#8D6E63] mt-1">
+                  {new Date(order.createdAt).toLocaleString()}
+                </p>
               </div>
-            ))}
-            <div>Total: ₹{order.total.toFixed(2)}</div>
-            <div>Date: {new Date(order.createdAt).toLocaleString()}</div>
-            <div>Status: {order.status}</div>
+            </div>
           </CardContent>
         </Card>
       ))}

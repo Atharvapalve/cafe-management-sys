@@ -17,7 +17,6 @@ interface EditableUser {
   preferences: {
     favoriteCoffee?: string
     preferredMilk?: string
-    rewardsTier: string
   }
 }
 
@@ -39,7 +38,6 @@ export function ProfileCard() {
       preferences: {
         favoriteCoffee: user.preferences?.favoriteCoffee,
         preferredMilk: user.preferences?.preferredMilk,
-        rewardsTier: user.preferences?.rewardsTier || "Bronze",
       },
     })
   }
@@ -68,9 +66,9 @@ export function ProfileCard() {
   }
 
   return (
-    <Card className="w-full max-w-2xl mx-auto bg-coffee-light shadow-lg">
-      <CardHeader className="bg-coffee-medium text-coffee-light p-6">
-        <CardTitle className="text-3xl font-bold flex items-center gap-2">
+    <Card className="w-full max-w-2xl mx-auto bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-[#BCAAA4]">
+      <CardHeader className="bg-[#EFEBE9]/80 backdrop-blur-sm rounded-t-xl border-b border-[#BCAAA4]">
+        <CardTitle className="text-3xl font-bold flex items-center gap-2 text-[#5D4037]">
           <User className="h-8 w-8" />
           {isEditing ? "Edit Profile" : "User Profile"}
         </CardTitle>
@@ -79,49 +77,49 @@ export function ProfileCard() {
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1 space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-coffee-dark">Name</label>
+              <label className="text-sm font-medium text-[#5D4037]">Name</label>
               {isEditing ? (
                 <Input
                   name="name"
                   value={editedUser?.name || ""}
                   onChange={handleInputChange}
-                  className="border-coffee-medium"
+                  className="border-[#BCAAA4]"
                 />
               ) : (
-                <div className="flex items-center gap-2 text-lg">
-                  <User className="h-5 w-5 text-coffee-accent" />
+                <div className="flex items-center gap-2 text-lg text-[#8D6E63]">
+                  <User className="h-5 w-5 text-[#5D4037]" />
                   {user.name}
                 </div>
               )}
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-coffee-dark">Email</label>
+              <label className="text-sm font-medium text-[#5D4037]">Email</label>
               {isEditing ? (
                 <Input
                   name="email"
                   value={editedUser?.email || ""}
                   onChange={handleInputChange}
-                  className="border-coffee-medium"
+                  className="border-[#BCAAA4]"
                 />
               ) : (
-                <div className="flex items-center gap-2 text-lg">
-                  <Mail className="h-5 w-5 text-coffee-accent" />
+                <div className="flex items-center gap-2 text-lg text-[#8D6E63]">
+                  <Mail className="h-5 w-5 text-[#5D4037]" />
                   {user.email}
                 </div>
               )}
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-coffee-dark">Phone</label>
+              <label className="text-sm font-medium text-[#5D4037]">Phone</label>
               {isEditing ? (
                 <Input
                   name="phone"
                   value={editedUser?.phone || ""}
                   onChange={handleInputChange}
-                  className="border-coffee-medium"
+                  className="border-[#BCAAA4]"
                 />
               ) : (
-                <div className="flex items-center gap-2 text-lg">
-                  <Phone className="h-5 w-5 text-coffee-accent" />
+                <div className="flex items-center gap-2 text-lg text-[#8D6E63]">
+                  <Phone className="h-5 w-5 text-[#5D4037]" />
                   {user.phone || "Not provided"}
                 </div>
               )}
@@ -129,14 +127,14 @@ export function ProfileCard() {
           </div>
          
         </div>
-        <div className="flex justify-end space-x-4 pt-4 border-t border-coffee-medium">
+        <div className="flex justify-end space-x-4 pt-4 border-t border-[#BCAAA4]">
           {isEditing ? (
-            <Button onClick={handleSave} className="bg-coffee-accent text-coffee-light hover:bg-coffee-dark">
+            <Button onClick={handleSave} className="bg-[#5D4037] text-white hover:bg-[#8D6E63]">
               <Save className="h-4 w-4 mr-2" />
               Save Changes
             </Button>
           ) : (
-            <Button onClick={handleEdit} className="bg-coffee-accent text-coffee-light hover:bg-coffee-dark">
+            <Button onClick={handleEdit} className="bg-[#5D4037] text-white hover:bg-[#8D6E63]">
               <Edit2 className="h-4 w-4 mr-2" />
               Edit Profile
             </Button>

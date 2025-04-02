@@ -1,14 +1,20 @@
 import "./globals.css"
-import { Inter } from "next/font/google"
+import { Playfair_Display, Poppins } from "next/font/google"
 import { AuthProvider } from "@/contexts/auth-context"
-import type React from "react" // Added import for React
-import { Toaster } from "react-hot-toast";
+import { BackgroundWrapper } from "@/components/ui/background-wrapper"
+import type React from "react"
+import { Toaster } from "sonner"
 
-const inter = Inter({ subsets: ["latin"] })
+const playfair = Playfair_Display({ subsets: ["latin"], variable: '--font-playfair' })
+const poppins = Poppins({ 
+  weight: ['400', '500', '600', '700'],
+  subsets: ["latin"],
+  variable: '--font-poppins'
+})
 
 export const metadata = {
-  title: "Cafe Management System",
-  description: "Manage your cafe with ease",
+  title: "Café Delight",
+  description: "A modern café management system",
 }
 
 export default function RootLayout({
@@ -17,10 +23,22 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <AuthProvider>{children}</AuthProvider>
-        <Toaster position="top-right" />
+    <html lang="en" className={`${playfair.variable} ${poppins.variable}`}>
+      <body className="min-h-screen">
+        <AuthProvider>
+          <BackgroundWrapper>
+            {children}
+          </BackgroundWrapper>
+        </AuthProvider>
+        <Toaster position="top-center" 
+          toastOptions={{
+            style: {
+              background: '#5D4037',
+              color: '#FFFFFF',
+              border: '1px solid #BCAAA4',
+            },
+          }}
+        />
       </body>
     </html>
   )
