@@ -175,7 +175,11 @@ export default function Dashboard() {
   // Define tab content components
   const tabContent = {
     menu: <MenuGrid items={menuItems} onAddToCart={handleAddToCart} />,
-    wallet: <WalletCard />,
+    wallet: (
+      <>
+        <WalletCard />
+      </>
+    ),
     profile: <ProfileCard />,
     orders: <OrderHistory />,
   };
