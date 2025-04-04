@@ -2,10 +2,11 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react"
+import { Minus, Plus, ShoppingBag, Trash2, CreditCard, Wallet } from "lucide-react"
 import { CartItem } from "@/types/menu"
 import { useState } from "react"
 import { toast } from "sonner"
+import { PaymentButton } from "@/components/ui/payment-button"
 
 interface CartModalProps {
   isOpen: boolean
@@ -25,6 +26,7 @@ export function CartModal({
   setCartItems,
 }: CartModalProps) {
   const [isProcessing, setIsProcessing] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'razorpay'>('wallet')
 
   const updateQuantity = (itemId: string, change: number) => {
     setCartItems((prevItems) =>
@@ -52,9 +54,11 @@ export function CartModal({
   )
 
   const handlePlaceOrder = async () => {
-    if (subtotal > walletBalance) {
-      toast.error("Insufficient wallet balance")
-      return
+    if (paymentMethod === 'wallet') {
+      if (subtotal > walletBalance) {
+        toast.error("Insufficient wallet balance")
+        return
+      }
     }
 
     if (items.length === 0) {
@@ -72,6 +76,18 @@ export function CartModal({
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  const handleRazorpaySuccess = (paymentData: any) => {
+    // After successful payment, close the modal and place order
+    toast.success(`Payment successful!`);
+    onPlaceOrder();
+    onClose();
+  }
+
+  const handleRazorpayFailure = (error: any) => {
+    toast.error(error.message || "Payment failed. Please try again.");
+    setIsProcessing(false);
   }
 
   const handleClose = () => {
@@ -159,25 +175,65 @@ export function CartModal({
                   <span className="text-[#8D6E63]">Wallet Balance</span>
                   <span className="font-medium text-[#5D4037]">₹{walletBalance.toFixed(2)}</span>
                 </div>
-                {subtotal > walletBalance && (
+                
+                {/* Payment Method Selector */}
+                <div className="mb-4">
+                  <div className="text-[#5D4037] mb-2 font-medium">Select Payment Method</div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={paymentMethod === 'wallet' ? 'default' : 'outline'}
+                      className={`flex-1 ${paymentMethod === 'wallet' ? 'bg-[#5D4037] text-white' : 'border-[#8D6E63] text-[#5D4037]'}`}
+                      onClick={() => setPaymentMethod('wallet')}
+                    >
+                      <Wallet className="h-4 w-4 mr-2" />
+                      Wallet
+                    </Button>
+                    <Button
+                      variant={paymentMethod === 'razorpay' ? 'default' : 'outline'}
+                      className={`flex-1 ${paymentMethod === 'razorpay' ? 'bg-[#5D4037] text-white' : 'border-[#8D6E63] text-[#5D4037]'}`}
+                      onClick={() => setPaymentMethod('razorpay')}
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Card
+                    </Button>
+                  </div>
+                </div>
+                
+                {paymentMethod === 'wallet' && subtotal > walletBalance && (
                   <p className="text-red-500 text-sm mb-4">
-                    Insufficient wallet balance. Please add funds to continue.
+                    Insufficient wallet balance. Please add funds or use card payment.
                   </p>
                 )}
-                <Button
-                  className="w-full bg-[#5D4037] hover:bg-[#4E342E] text-white"
-                  onClick={handlePlaceOrder}
-                  disabled={isProcessing || subtotal > walletBalance || items.length === 0}
-                >
-                  {isProcessing ? (
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Processing...
-                    </div>
-                  ) : (
-                    `Place Order • ₹${subtotal.toFixed(2)}`
-                  )}
-                </Button>
+                
+                {/* Payment Buttons */}
+                {paymentMethod === 'wallet' ? (
+                  <Button
+                    className="w-full bg-[#5D4037] hover:bg-[#4E342E] text-white"
+                    onClick={handlePlaceOrder}
+                    disabled={isProcessing || subtotal > walletBalance || items.length === 0}
+                  >
+                    {isProcessing ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Processing...
+                      </div>
+                    ) : (
+                      `Pay with Wallet • ₹${subtotal.toFixed(2)}`
+                    )}
+                  </Button>
+                ) : (
+                  <PaymentButton
+                    amount={subtotal}
+                    onSuccess={handleRazorpaySuccess}
+                    onFailure={handleRazorpayFailure}
+                    isProcessing={isProcessing}
+                    setIsProcessing={setIsProcessing}
+                    disabled={isProcessing || items.length === 0}
+                    className="w-full"
+                  >
+                    Pay with Card • ₹{subtotal.toFixed(2)}
+                  </PaymentButton>
+                )}
               </div>
             </>
           )}
