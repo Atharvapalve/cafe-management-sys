@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
+    select: false
   },
   role: { type: String, enum: ["user", "admin"], default: "user" },
   phone: {
@@ -51,5 +52,16 @@ userSchema.pre("save", async function (next) {
   }
   next();
 });
+
+// Instance method to verify password
+userSchema.methods.verifyPassword = async function(password) {
+  try {
+    // Use bcrypt.compare to check the provided password against the hashed one
+    return await bcrypt.compare(password, this.password);
+  } catch (error) {
+    console.error("Error verifying password:", error);
+    return false;
+  }
+};
 
 export default mongoose.model("User", userSchema);

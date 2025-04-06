@@ -1,10 +1,9 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { body, validationResult } from "express-validator";
+import { body, validationResult, check } from "express-validator";
 import User from "../models/User.js";
 import { validate } from "../middleware/validate.js";
-import axios from "axios";
 
 const router = express.Router();
 
@@ -35,70 +34,13 @@ router.post(
         return res.status(400).json({ message: "User with this email already exists" });
       }
 
-      // Verify that the email is real and valid
-      try {
-        // Using Abstract API's email validation
-        const apiKey = process.env.EMAIL_VALIDATION_API_KEY || 'test_key';
-        const response = await axios.get(`https://emailvalidation.abstractapi.com/v1/?api_key=${apiKey}&email=${email}`);
-        
-        // Check if the email is valid and deliverable
-        if (!response.data) {
-          return res.status(400).json({ message: "Email validation failed. Please use a valid email address." });
-        }
-        
-        const { is_valid_format, is_mx_found, is_smtp_valid, deliverability, domain } = response.data;
-        
-        if (!is_valid_format) {
-          return res.status(400).json({ message: "Email format is invalid" });
-        }
-        
-        if (!is_mx_found) {
-          return res.status(400).json({ message: "Email domain does not have valid mail servers" });
-        }
-        
-        if (!is_smtp_valid) {
-          return res.status(400).json({ message: "Email address is not valid according to SMTP check" });
-        }
-        
-        if (deliverability === "UNDELIVERABLE") {
-          return res.status(400).json({ message: "This email address appears to be undeliverable" });
-        }
-        
-        // Check for common domain typos
-        const commonDomains = {
-          'gmil.com': 'gmail.com',
-          'gmal.com': 'gmail.com',
-          'gmail.co': 'gmail.com',
-          'gamil.com': 'gmail.com',
-          'hotmal.com': 'hotmail.com',
-          'hotmail.co': 'hotmail.com',
-          'yaho.com': 'yahoo.com',
-          'yahooo.com': 'yahoo.com',
-          'yahhoo.com': 'yahoo.com',
-          'outlook.co': 'outlook.com',
-          'outloo.com': 'outlook.com',
-        };
-        
-        if (commonDomains[domain]) {
-          return res.status(400).json({ 
-            message: `Did you mean ${email.split('@')[0]}@${commonDomains[domain]}? The domain ${domain} appears to be a typo.` 
-          });
-        }
-      } catch (emailValidationError) {
-        console.error("Email validation error:", emailValidationError);
-        // No longer falling back - instead returning an error
-        return res.status(400).json({ 
-          message: "Unable to verify email address. Please try again later or use a different email address." 
-        });
-      }
+      // No longer using external API to validate email - relying on built-in validation
+      // This allows users to register with any valid email format
 
       // Create a new user
       user = new User({ name, email, password, phone, role : "user" });
 
-      // Hash password
-      const salt = await bcrypt.genSalt(10);
-      user.password = await bcrypt.hash(password, salt);
-
+      // No need to hash password here as it's done in the User model's pre-save middleware
       await user.save();
 
       // Generate JWT token
@@ -107,7 +49,27 @@ router.post(
         process.env.JWT_SECRET,
         { expiresIn: "7d" }
       );
-      res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone, wallet: user.wallet } });
+      
+      // Set cookie just like in login
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
+      // Return data in same format as login
+      const userData = {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        wallet: user.wallet || { balance: 0 }
+      };
+
+      console.log('Registration successful for:', email);
+      res.status(201).json({ token, user: userData });
     } catch (error) {
       console.error("Registration error:", error);
       res.status(500).json({ message: "Server error" });
@@ -116,43 +78,92 @@ router.post(
 );
 
 // backend/routes/auth.js
-router.post("/login", validate([
-  body("email").isEmail().withMessage("Invalid email"),
-  body("password").notEmpty().withMessage("Password is required"),
-]), async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-    console.log("User found during login:", user);
+router.post('/login', [
+  check('email', 'Please include a valid email').isEmail(),
+  check('password', 'Password is required').exists()
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    console.log('Login validation errors:', errors.array());
+    return res.status(400).json({ errors: errors.array() });
+  }
 
-    // Generate JWT token with role
-    const tokenPayload = { userId: user._id, role: user.role }; // Include the role
-    console.log("Generated token payload:", tokenPayload);
+  const { email, password } = req.body;
+  console.log('Login attempt for email:', email);
+
+  try {
+    // Check if user exists
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      console.log('User not found:', email);
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Check password
+    console.log('User found, checking password...');
+    console.log('Password from request:', password ? 'Provided' : 'Not provided');
+    console.log('Password from DB:', user.password ? `Found (length: ${user.password.length})` : 'Not found');
+    
+    let isMatch = false;
+    try {
+      // Try using the User model's verifyPassword method if available
+      if (typeof user.verifyPassword === 'function') {
+        console.log('Using verifyPassword method');
+        isMatch = await user.verifyPassword(password);
+      } else {
+        console.log('Using bcrypt.compare directly');
+        isMatch = await bcrypt.compare(password, user.password);
+      }
+      console.log('Password comparison result:', isMatch);
+    } catch (error) {
+      console.error('Error comparing passwords:', error);
+      return res.status(500).json({ message: 'Error verifying credentials' });
+    }
+
+    if (!isMatch) {
+      console.log('Password does not match for user:', email);
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // User authenticated, send token and user data
+    const payload = {
+      userId: user.id,
+      role: user.role
+    };
+
+    // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id, role: user.role }, // Include the role
+      payload,
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: '24h' }
     );
-    // Set the token as a cookie
+    
+    // Set JWT as cookie
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000
     });
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone, wallet: user.wallet } });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: "Server error" });
+
+    // Return the user data (excluding the password)
+    const userData = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      wallet: user.wallet || { balance: 0 }
+    };
+
+    console.log('Login successful for:', email);
+    res.json({ token, user: userData });
+  } catch (err) {
+    console.error('Server error during login:', err.message);
+    res.status(500).json({ message: 'Server Error' });
   }
 });
+
 router.post("/logout", (req, res) => {
   try {
     // Clear the token by setting it to an expired value or removing it
@@ -163,4 +174,77 @@ router.post("/logout", (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// DEBUG ONLY - Test endpoint to verify database connection and hash passwords
+router.get("/test-auth", async (req, res) => {
+  try {
+    // Get a count of all users to verify DB access
+    const userCount = await User.countDocuments();
+    
+    // Create a test password hash to verify bcrypt is working
+    const testHash = await bcrypt.hash('testpassword123', 10);
+    
+    // Verify the hash to check if bcrypt comparison works
+    const hashVerification = await bcrypt.compare('testpassword123', testHash);
+    
+    res.json({
+      status: 'success',
+      dbConnection: 'ok',
+      userCount,
+      bcryptWorking: hashVerification,
+      testHash: testHash.substring(0, 10) + '...'
+    });
+  } catch (error) {
+    console.error("Auth test error:", error);
+    res.status(500).json({ 
+      status: 'error',
+      message: "Server error during auth test",
+      error: error.message
+    });
+  }
+});
+
+// DEBUG ONLY - Test endpoint to check for user by email
+router.get("/find-user/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+    
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    
+    // Find user without password
+    const basicUser = await User.findOne({ email }).lean();
+    
+    // Find user with password
+    const userWithPassword = await User.findOne({ email }).select('+password').lean();
+    
+    if (!basicUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    res.json({
+      status: 'success',
+      message: "User found",
+      userExists: !!basicUser,
+      passwordField: userWithPassword ? "included" : "not included",
+      passwordLength: userWithPassword?.password?.length,
+      user: {
+        _id: basicUser._id,
+        id: basicUser._id,  // For comparison
+        name: basicUser.name,
+        email: basicUser.email,
+        role: basicUser.role
+      }
+    });
+  } catch (error) {
+    console.error("Find user error:", error);
+    res.status(500).json({ 
+      status: 'error',
+      message: "Server error while finding user",
+      error: error.message
+    });
+  }
+});
+
 export default router;
