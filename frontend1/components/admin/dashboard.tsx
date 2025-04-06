@@ -171,7 +171,13 @@ export function AdminDashboard() {
       totalOrdersToday = ordersToUse.length;
       
       // Unique clients
-      const uniqueClientIds = new Set(ordersToUse.map(order => order.user?._id).filter(Boolean));
+      const uniqueClientIds = new Set(ordersToUse.map(order => {
+        // Safely check for user and user._id property
+        if (order.user && '_id' in order.user) {
+          return (order.user as any)._id;
+        }
+        return null;
+      }).filter(Boolean));
       totalClientsToday = uniqueClientIds.size;
       
       // Average order value (revenue per ratio)
@@ -190,38 +196,93 @@ export function AdminDashboard() {
   };
 
   const generateTrendingItems = (orderData: Order[], menuData: MenuItem[]) => {
-    // Count orders per menu item
-    const itemCounts: Record<string, { count: number, name: string, image: string }> = {};
+    // Count orders per menu item - for current period (last 30 days)
+    const currentPeriodCounts: Record<string, { count: number, name: string, image: string }> = {};
     
-    orderData.forEach(order => {
+    // Get dates for current and previous periods
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(today.getDate() - 60);
+    
+    // Filter orders for current period (last 30 days)
+    const currentPeriodOrders = orderData.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      return orderDate >= thirtyDaysAgo && orderDate <= today;
+    });
+    
+    // Filter orders for previous period (30-60 days ago)
+    const previousPeriodOrders = orderData.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      return orderDate >= sixtyDaysAgo && orderDate < thirtyDaysAgo;
+    });
+    
+    // Process current period orders
+    currentPeriodOrders.forEach(order => {
       order.items.forEach(item => {
         if (item.menuItem) {
           const id = item.menuItem._id;
-          if (!itemCounts[id]) {
-            itemCounts[id] = { 
+          if (!currentPeriodCounts[id]) {
+            // Find the menu item in menuData to get the full details
+            const fullMenuItem = menuData.find(m => m._id === id);
+            
+            currentPeriodCounts[id] = { 
               count: 0, 
               name: item.menuItem.name,
-              image: item.menuItem.image || "/images/default-coffee.jpg"
+              image: item.menuItem.image || ""
             };
           }
-          itemCounts[id].count += item.quantity;
+          currentPeriodCounts[id].count += item.quantity;
         }
       });
     });
     
-    // Convert to array and sort by count
-    const sortedItems = Object.entries(itemCounts)
-      .map(([id, data]) => ({
-        id,
-        name: data.name,
-        orders: data.count,
-        image: data.image,
-        trend: Math.floor(Math.random() * 30) // Mock trend data (random for demo)
-      }))
-      .sort((a, b) => b.orders - a.orders)
+    // Count orders for previous period
+    const previousPeriodCounts: Record<string, number> = {};
+    
+    previousPeriodOrders.forEach(order => {
+      order.items.forEach(item => {
+        if (item.menuItem) {
+          const id = item.menuItem._id;
+          if (!previousPeriodCounts[id]) {
+            previousPeriodCounts[id] = 0;
+          }
+          previousPeriodCounts[id] += item.quantity;
+        }
+      });
+    });
+    
+    // Calculate trends and sort by current period popularity
+    const trendingItemsData = Object.entries(currentPeriodCounts)
+      .map(([id, data]) => {
+        const currentCount = data.count;
+        const previousCount = previousPeriodCounts[id] || 0;
+        
+        // Calculate trend percentage
+        let trendPercent = 0;
+        if (previousCount > 0) {
+          // Calculate percentage change
+          trendPercent = Math.round(((currentCount - previousCount) / previousCount) * 100);
+        } else if (currentCount > 0) {
+          // If no previous orders but has current orders, mark as new/trending up (100%)
+          trendPercent = 100;
+        }
+        
+        return {
+          id,
+          name: data.name,
+          orders: currentCount,
+          image: data.image,
+          trend: trendPercent
+        };
+      })
+      .sort((a, b) => b.orders - a.orders) // Sort by current period popularity
       .slice(0, 3); // Top 3 items
     
-    setTrendingItems(sortedItems);
+    console.log("Trending items with real trends:", trendingItemsData);
+    setTrendingItems(trendingItemsData);
   };
 
   const generateRevenueData = (orderData: Order[], period: string) => {
@@ -549,19 +610,18 @@ export function AdminDashboard() {
             <div className="space-y-4">
               {trendingItems.map((item, index) => (
                 <div key={item.id} className="flex items-center space-x-4 p-2 rounded-lg hover:bg-gray-50">
-                  <div className="relative h-16 w-16 rounded-lg overflow-hidden">
-                    <Image
-                      src={item.image || "/images/default-coffee.jpg"}
-                      alt={item.name}
-                      fill
-                      sizes="64px"
-                      style={{ objectFit: "cover" }}
-                      onError={(e) => {
-                        // Fallback to default image if the original fails to load
-                        const target = e.target as HTMLImageElement;
-                        target.src = "/images/default-coffee.jpg";
-                      }}
-                    />
+                  <div className="relative h-16 w-16 rounded-lg overflow-hidden flex items-center justify-center">
+                    {item.image ? (
+                      <img
+                        src={item.image.startsWith("http") ? item.image : `http://localhost:5000${item.image}`}
+                        alt={item.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-[#EFEBE9] flex items-center justify-center">
+                        <Coffee className="w-8 h-8 text-[#8D6E63]" />
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1">
                     <h4 className="font-medium text-[#5D4037]">{item.name}</h4>
