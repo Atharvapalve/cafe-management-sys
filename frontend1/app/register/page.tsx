@@ -1,16 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Coffee, User, Mail, Lock } from "lucide-react";
+import { Coffee, User, Mail, Lock, Phone } from "lucide-react";
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [error, setError] = useState("");
   const [registered, setRegistered] = useState(false);
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.src = "/videos/coffee-bg.mp4";
+      videoRef.current.load();
+    }
+
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.src = "";
+        videoRef.current.load();
+      }
+    };
+  }, []);
+
+  const handleVideoLoad = () => {
+    setIsVideoLoaded(true);
+  };
+
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    console.error("Video loading error:", e);
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,20 +58,47 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#D7CCC8] px-4">
-      <div className="w-full max-w-md">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#5D4037]">
+      {/* Background Video */}
+      <video
+        ref={videoRef}
+        autoPlay
+        loop
+        muted
+        playsInline
+        className={`absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-700 ${
+          isVideoLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{ zIndex: 0 }}
+        onLoadedData={handleVideoLoad}
+        onError={handleVideoError}
+        src="/videos/coffee-bg.mp4"
+      />
+
+      {/* Overlay */}
+      <div 
+        className="absolute inset-0 bg-[#5D4037]/60 backdrop-blur-[2px]"
+        style={{ zIndex: 1 }}
+      ></div>
+
+      <div className="relative w-full max-w-md z-10">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <Coffee size={48} className="text-[#5D4037]" />
+            <Coffee size={48} className="text-[#FFF]" />
           </div>
-          <h1 className="text-4xl font-bold text-[#5D4037] mb-2">Create Account</h1>
-          <p className="text-[#8D6E63]">Join our coffee community today</p>
+          <h1 className="text-4xl font-bold text-white mb-2">Create Account</h1>
+          <p className="text-[#D7CCC8]">Join our coffee community today</p>
         </div>
 
-        <div className="glass-effect p-8 rounded-2xl">
+        <div className="glass-effect p-8 rounded-2xl transform hover:scale-[1.02] transition-all duration-300">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg text-sm mb-6">
               {error}
+              {error.includes("email") && (
+                <div className="mt-2 pt-2 border-t border-red-100 text-xs">
+                  Please ensure you're using a real, valid email address that can receive verification emails.
+                </div>
+              )}
             </div>
           )}
 
@@ -86,6 +137,21 @@ export default function RegisterPage() {
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   className="coffee-input pl-11"
                   required
+                  title="Please enter a valid email address that you have access to"
+                />
+              </div>
+
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#8D6E63] w-5 h-5" />
+                <Input
+                  placeholder="Phone Number"
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="coffee-input pl-11"
+                  required
+                  pattern="[0-9]{10}"
+                  title="Please enter a valid 10-digit phone number"
                 />
               </div>
 

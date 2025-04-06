@@ -6,32 +6,23 @@ import { addFunds } from "@/lib/api"
 import { CreditCard } from "lucide-react"
 import { toast } from "sonner"
 
-// For debugging
-function debug(message: string, ...args: any[]) {
-  console.log(`[WALLET DEBUG] ${message}`, ...args);
-}
-
 export function WalletCard() {
   const { user, updateUser } = useAuth()
   const [amount, setAmount] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Check for Razorpay on mount
+  // Clean up useEffect
   useEffect(() => {
-    debug("Wallet Card component mounted");
-    debug("User:", user ? `${user.name} (${user.email})` : "No user");
-    debug("User wallet balance:", user?.wallet?.balance || 0);
+    // Empty useEffect to keep component functionality without debug logs
   }, [user]);
 
   const validateAmount = () => {
-    debug("Validating amount:", amount);
+    // Remove debug logs but keep validation logic
     if (!amount || Number(amount) <= 0) {
-      debug("Invalid amount");
       setError("Please enter a valid amount greater than 0.");
       return false;
     }
-    debug("Amount valid");
     setError(null);
     return true;
   }
@@ -40,7 +31,6 @@ export function WalletCard() {
     if (!validateAmount()) return;
     
     if (typeof window === 'undefined' || !window.Razorpay) {
-      console.error("Razorpay not loaded");
       toast.error("Payment system is not available");
       return;
     }
@@ -71,21 +61,12 @@ export function WalletCard() {
         "color": "#5D4037"
       },
       "handler": async function (response: any) {
-        console.log("Payment successful:", response);
-        
         try {
-          // Log the payment information
-          console.log("Payment ID:", response.razorpay_payment_id);
-          console.log("Order ID:", response.razorpay_order_id);
-          console.log("Signature:", response.razorpay_signature);
-          
           toast.success("Payment successful!");
           
           // Add funds to wallet
           try {
-            console.log("Adding funds to wallet:", numAmount);
             const updatedUser = await addFunds(numAmount);
-            console.log("Wallet updated:", updatedUser);
             
             // Update user context with new balance
             updateUser(updatedUser);
@@ -93,11 +74,9 @@ export function WalletCard() {
             
             toast.success(`₹${numAmount} added to your wallet!`);
           } catch (error) {
-            console.error("Failed to update wallet:", error);
             toast.error("Payment was successful but wallet update failed");
           }
         } catch (error) {
-          console.error("Error processing payment success:", error);
           toast.error("Error processing payment");
         } finally {
           setIsProcessing(false);
@@ -105,7 +84,6 @@ export function WalletCard() {
       },
       "modal": {
         "ondismiss": function () {
-          console.log("Checkout form closed by the user");
           toast.info("Payment cancelled");
           setIsProcessing(false);
         }
@@ -113,38 +91,22 @@ export function WalletCard() {
     };
 
     try {
-      console.log("Creating Razorpay instance with options:", {
-        ...options,
-        key: options.key.substring(0, 8) + "..." // Don't log full key
-      });
-      
       var rzp1 = new window.Razorpay(options);
       
       // Register for payment failed event
       rzp1.on('payment.failed', function(response: any) {
-        console.error("Payment failed:", response);
-        if (response.error) {
-          console.error("Error code:", response.error.code);
-          console.error("Error description:", response.error.description);
-          console.error("Error source:", response.error.source);
-          console.error("Error step:", response.error.step);
-          console.error("Error reason:", response.error.reason);
-        }
         toast.error("Payment failed: " + (response.error?.description || "Unknown error"));
         setIsProcessing(false);
       });
       
-      console.log("Opening Razorpay checkout");
       rzp1.open();
     } catch (error) {
-      console.error("Error opening Razorpay:", error);
       toast.error("Failed to open payment form");
       setIsProcessing(false);
     }
   };
 
   if (!user) {
-    debug("No user found, not rendering wallet card");
     return null;
   }
 
@@ -187,7 +149,6 @@ export function WalletCard() {
                   type="number"
                   value={amount}
                   onChange={(e) => {
-                    debug("Amount changed:", e.target.value);
                     setAmount(e.target.value);
                     if (error) validateAmount();
                   }}
