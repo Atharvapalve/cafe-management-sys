@@ -16,7 +16,10 @@ const userSchema = new mongoose.Schema({
     required: true,
   },
   role: { type: String, enum: ["user", "admin"], default: "user" },
-  phone: String,
+  phone: {
+    type: String,
+    required: true,
+  },
   memberSince: {
     type: Date,
     default: Date.now,

@@ -21,7 +21,7 @@ export interface User {
     balance: number;
   };
   memberSince?: string;
-  phone?: string;
+  phone: string;
   preferences?: {
     favoriteCoffee?: string;
     preferredMilk?: string;
