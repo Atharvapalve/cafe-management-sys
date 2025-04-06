@@ -10,6 +10,12 @@ import { MenuManagement } from "@/components/admin/menu management";
 import { UserManagement } from "@/components/admin/user management";
 import { OrderManagement } from "@/components/admin/order management";
 import { AdminDashboard } from "@/components/admin/dashboard";
+import { Playfair_Display } from "next/font/google";
+
+const playfair = Playfair_Display({ 
+  subsets: ['latin'],
+  variable: '--font-playfair'
+});
 
 interface User {
   _id: string;
@@ -26,6 +32,18 @@ const AdminPage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [orders, setOrders] = useState([]);
   const usersRef = useRef<User[]>([]);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+
+  const imageUrl = "https://images.unsplash.com/photo-1447933601403-0c6688de566e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1456&q=80&v=" + new Date().getTime();
+
+  useEffect(() => {
+    // Preload the background image
+    const preloadImg = new Image();
+    preloadImg.onload = () => {
+      setIsImageLoaded(true);
+    };
+    preloadImg.src = imageUrl;
+  }, [imageUrl]);
 
   const fetchData = useCallback(async () => {
     let menuData: any = [];
@@ -91,47 +109,74 @@ const AdminPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5DC] p-6">
-      <Card className="w-full max-w-6xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-[#5D4037]">
-            Admin Dashboard
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2 mb-6">
-            <Button
-              onClick={() => setActiveTab("dashboard")}
-              variant={activeTab === "dashboard" ? "default" : "outline"}
-              className={activeTab === "dashboard" ? "bg-[#5D4037]" : "text-[#5D4037] border-[#5D4037]"}
-            >
-              Dashboard
-            </Button>
-            <Button
-              onClick={() => setActiveTab("menu")}
-              variant={activeTab === "menu" ? "default" : "outline"}
-              className={activeTab === "menu" ? "bg-[#5D4037]" : "text-[#5D4037] border-[#5D4037]"}
-            >
-              Menu Management
-            </Button>
-            <Button
-              onClick={() => setActiveTab("users")}
-              variant={activeTab === "users" ? "default" : "outline"}
-              className={activeTab === "users" ? "bg-[#5D4037]" : "text-[#5D4037] border-[#5D4037]"}
-            >
-              User Management
-            </Button>
-            <Button
-              onClick={() => setActiveTab("orders")}
-              variant={activeTab === "orders" ? "default" : "outline"}
-              className={activeTab === "orders" ? "bg-[#5D4037]" : "text-[#5D4037] border-[#5D4037]"}
-            >
-              Order Management
-            </Button>
-          </div>
-          {tabContent[activeTab as keyof typeof tabContent]}
-        </CardContent>
-      </Card>
+    <div className={`relative min-h-screen bg-[#5D4037] ${playfair.variable}`}>
+      {/* Background Image */}
+      <img
+        src={imageUrl}
+        className={`fixed top-0 left-0 w-full h-full object-cover transition-opacity duration-700 ${
+          isImageLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{ zIndex: 0 }}
+        alt=""
+      />
+
+      {/* Overlay */}
+      <div 
+        className="fixed top-0 left-0 right-0 bottom-0 bg-[#5D4037]/60 backdrop-blur-[2px]"
+        style={{ zIndex: 1 }}
+      ></div>
+
+      {/* Content */}
+      <div className="relative p-6" style={{ zIndex: 2 }}>
+        <Card className="w-full max-w-6xl mx-auto border border-[#BCAAA4] bg-white/90 backdrop-blur-sm">
+          <CardHeader className="border-b border-[#BCAAA4]">
+            <CardTitle className="text-3xl font-bold text-[#5D4037] font-playfair">
+              Admin Dashboard
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap gap-2 mb-6">
+              <Button
+                onClick={() => setActiveTab("dashboard")}
+                variant={activeTab === "dashboard" ? "default" : "outline"}
+                className={activeTab === "dashboard" 
+                  ? "bg-[#5D4037] text-white hover:bg-[#8D6E63]" 
+                  : "text-[#5D4037] border-[#BCAAA4] hover:bg-[#EFEBE9] hover:text-[#5D4037]"}
+              >
+                Dashboard
+              </Button>
+              <Button
+                onClick={() => setActiveTab("menu")}
+                variant={activeTab === "menu" ? "default" : "outline"}
+                className={activeTab === "menu" 
+                  ? "bg-[#5D4037] text-white hover:bg-[#8D6E63]" 
+                  : "text-[#5D4037] border-[#BCAAA4] hover:bg-[#EFEBE9] hover:text-[#5D4037]"}
+              >
+                Menu Management
+              </Button>
+              <Button
+                onClick={() => setActiveTab("users")}
+                variant={activeTab === "users" ? "default" : "outline"}
+                className={activeTab === "users" 
+                  ? "bg-[#5D4037] text-white hover:bg-[#8D6E63]" 
+                  : "text-[#5D4037] border-[#BCAAA4] hover:bg-[#EFEBE9] hover:text-[#5D4037]"}
+              >
+                User Management
+              </Button>
+              <Button
+                onClick={() => setActiveTab("orders")}
+                variant={activeTab === "orders" ? "default" : "outline"}
+                className={activeTab === "orders" 
+                  ? "bg-[#5D4037] text-white hover:bg-[#8D6E63]" 
+                  : "text-[#5D4037] border-[#BCAAA4] hover:bg-[#EFEBE9] hover:text-[#5D4037]"}
+              >
+                Order Management
+              </Button>
+            </div>
+            {tabContent[activeTab as keyof typeof tabContent]}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

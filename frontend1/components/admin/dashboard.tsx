@@ -435,70 +435,70 @@ export function AdminDashboard() {
       
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <Card className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-[#BCAAA4]">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 font-medium">Total Menus</p>
+                <p className="text-sm text-[#8D6E63] font-medium">Total Menus</p>
                 <h3 className="text-3xl font-bold text-[#5D4037]">{metrics.totalMenuItems}</h3>
               </div>
-              <div className="bg-[#5D4037]/10 p-3 rounded-full">
+              <div className="bg-[#EFEBE9] p-3 rounded-full">
                 <Coffee className="h-6 w-6 text-[#5D4037]" />
               </div>
             </div>
-            <div className="mt-4 h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+            <div className="mt-4 h-1.5 w-full bg-[#D7CCC8] rounded-full overflow-hidden">
               <div className="bg-[#5D4037] h-full rounded-full" style={{ width: '65%' }}></div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <Card className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-[#BCAAA4]">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 font-medium">Total Orders Today</p>
+                <p className="text-sm text-[#8D6E63] font-medium">Total Orders Today</p>
                 <h3 className="text-3xl font-bold text-[#5D4037]">{metrics.totalOrdersToday}</h3>
               </div>
-              <div className="bg-blue-100 p-3 rounded-full">
-                <ShoppingBag className="h-6 w-6 text-blue-600" />
+              <div className="bg-[#EFEBE9] p-3 rounded-full">
+                <ShoppingBag className="h-6 w-6 text-[#5D4037]" />
               </div>
             </div>
-            <div className="mt-4 h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-              <div className="bg-blue-500 h-full rounded-full" style={{ width: '45%' }}></div>
+            <div className="mt-4 h-1.5 w-full bg-[#D7CCC8] rounded-full overflow-hidden">
+              <div className="bg-[#5D4037] h-full rounded-full" style={{ width: '45%' }}></div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <Card className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-[#BCAAA4]">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 font-medium">Total Clients Today</p>
+                <p className="text-sm text-[#8D6E63] font-medium">Total Clients Today</p>
                 <h3 className="text-3xl font-bold text-[#5D4037]">{metrics.totalClientsToday}</h3>
               </div>
-              <div className="bg-green-100 p-3 rounded-full">
-                <User className="h-6 w-6 text-green-600" />
+              <div className="bg-[#EFEBE9] p-3 rounded-full">
+                <User className="h-6 w-6 text-[#5D4037]" />
               </div>
             </div>
-            <div className="mt-4 h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-              <div className="bg-green-500 h-full rounded-full" style={{ width: '40%' }}></div>
+            <div className="mt-4 h-1.5 w-full bg-[#D7CCC8] rounded-full overflow-hidden">
+              <div className="bg-[#5D4037] h-full rounded-full" style={{ width: '40%' }}></div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <Card className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-[#BCAAA4]">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 font-medium">Revenue Per Ratio</p>
+                <p className="text-sm text-[#8D6E63] font-medium">Revenue Per Ratio</p>
                 <h3 className="text-3xl font-bold text-[#5D4037]">₹{metrics.averageOrderValue.toFixed(2)}</h3>
               </div>
-              <div className="bg-red-100 p-3 rounded-full">
-                <DollarSign className="h-6 w-6 text-red-600" />
+              <div className="bg-[#EFEBE9] p-3 rounded-full">
+                <DollarSign className="h-6 w-6 text-[#5D4037]" />
               </div>
             </div>
-            <div className="mt-4 h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-              <div className="bg-red-500 h-full rounded-full" style={{ width: '85%' }}></div>
+            <div className="mt-4 h-1.5 w-full bg-[#D7CCC8] rounded-full overflow-hidden">
+              <div className="bg-[#5D4037] h-full rounded-full" style={{ width: '85%' }}></div>
             </div>
           </CardContent>
         </Card>
@@ -506,7 +506,7 @@ export function AdminDashboard() {
       
       {/* Revenue Chart and Orders Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <Card className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <Card className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-[#BCAAA4]">
           <CardContent className="p-4">
             <div className="flex justify-between items-center mb-4">
               <CardTitle className="text-lg font-semibold text-[#5D4037]">Revenue</CardTitle>
@@ -548,7 +548,7 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
         
-        <Card className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <Card className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-[#BCAAA4]">
           <CardContent className="p-4">
             <div className="flex justify-between items-center mb-4">
               <CardTitle className="text-lg font-semibold text-[#5D4037]">Orders Summary</CardTitle>
@@ -588,7 +588,7 @@ export function AdminDashboard() {
                     return value;
                   }} />
                   <Bar dataKey="completed" fill="#5D4037" name="completed" />
-                  <Bar dataKey="pending" fill="#D7CCC8" name="pending" />
+                  <Bar dataKey="pending" fill="#BCAAA4" name="pending" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -598,7 +598,7 @@ export function AdminDashboard() {
       
       {/* Trending items and Orders Table */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <Card className="col-span-12 lg:col-span-4 bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <Card className="col-span-12 lg:col-span-4 bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-[#BCAAA4]">
           <CardContent className="p-4">
             <div className="flex justify-between items-center mb-4">
               <CardTitle className="text-lg font-semibold text-[#5D4037]">Trending</CardTitle>
@@ -609,7 +609,7 @@ export function AdminDashboard() {
             
             <div className="space-y-4">
               {trendingItems.map((item, index) => (
-                <div key={item.id} className="flex items-center space-x-4 p-2 rounded-lg hover:bg-gray-50">
+                <div key={item.id} className="flex items-center space-x-4 p-2 rounded-lg hover:bg-[#EFEBE9]">
                   <div className="relative h-16 w-16 rounded-lg overflow-hidden flex items-center justify-center">
                     {item.image ? (
                       <img
@@ -618,7 +618,7 @@ export function AdminDashboard() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-[#EFEBE9] flex items-center justify-center">
+                      <div className="w-full h-full bg-[#D7CCC8] flex items-center justify-center">
                         <Coffee className="w-8 h-8 text-[#8D6E63]" />
                       </div>
                     )}
@@ -626,7 +626,7 @@ export function AdminDashboard() {
                   <div className="flex-1">
                     <h4 className="font-medium text-[#5D4037]">{item.name}</h4>
                     <div className="flex items-center">
-                      <span className="text-gray-500 mr-2">{index + 1}</span>
+                      <span className="text-[#8D6E63] mr-2">{index + 1}</span>
                       <span className={`flex items-center ${item.trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {item.trend > 0 ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
                         {item.trend}%
@@ -642,7 +642,7 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
         
-        <Card className="col-span-12 lg:col-span-8 bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <Card className="col-span-12 lg:col-span-8 bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-[#BCAAA4]">
           <CardContent className="p-4">
             <div className="flex justify-between items-center mb-4">
               <CardTitle className="text-lg font-semibold text-[#5D4037]">Order List</CardTitle>
@@ -662,29 +662,34 @@ export function AdminDashboard() {
             
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
+                <TableRow className="border-b border-[#BCAAA4]">
+                  <TableHead className="text-[#5D4037]">Order ID</TableHead>
+                  <TableHead className="text-[#5D4037]">Date</TableHead>
+                  <TableHead className="text-[#5D4037]">Customer</TableHead>
+                  <TableHead className="text-[#5D4037]">Amount</TableHead>
+                  <TableHead className="text-[#5D4037]">Status</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {recentOrders.map(order => (
-                  <TableRow key={order._id} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">#{order._id.substring(order._id.length - 6)}</TableCell>
-                    <TableCell>{format(new Date(order.createdAt), 'MMM d, yyyy')}</TableCell>
-                    <TableCell>{order.user?.name || 'Guest'}</TableCell>
-                    <TableCell>₹{order.total.toFixed(2)}</TableCell>
+                  <TableRow key={order._id} className="hover:bg-[#EFEBE9] border-b border-[#BCAAA4]">
+                    <TableCell className="font-medium text-[#5D4037]">#{order._id.substring(order._id.length - 6)}</TableCell>
+                    <TableCell className="text-[#8D6E63]">{format(new Date(order.createdAt), 'MMM d, yyyy')}</TableCell>
+                    <TableCell className="text-[#5D4037]">{order.user?.name || 'Guest'}</TableCell>
+                    <TableCell className="text-[#5D4037]">₹{order.total.toFixed(2)}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${statusColors[order.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        order.status === 'pending' ? 'bg-[#EFEBE9] text-[#8D6E63]' :
+                        order.status === 'preparing' ? 'bg-[#D7CCC8] text-[#5D4037]' :
+                        order.status === 'Ready' ? 'bg-[#A1887F] text-white' :
+                        'bg-[#8D6E63] text-white'
+                      }`}>
                         {order.status}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" className="text-[#5D4037]">
+                      <Button variant="ghost" size="sm" className="text-[#5D4037] hover:text-[#8D6E63]">
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </TableCell>
