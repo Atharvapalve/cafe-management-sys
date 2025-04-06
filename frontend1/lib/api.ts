@@ -261,41 +261,43 @@ export async function updateOrderStatus(orderId: string, status: string) {
 
 /**
  * Create a Razorpay order
- * @param amount Amount in INR
+ * @param amount Amount in INR (will be converted to paise)
  * @returns Order details or error
  */
 export async function createRazorpayOrder(amount: number) {
+  console.log(`Creating Razorpay order for amount: ${amount} INR`);
+  
   try {
-    console.log(`[API DEBUG] Creating Razorpay order for amount: ${amount} INR`);
-    const response = await fetch(`${API_URL}/payment/create-order`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({ amount }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[API DEBUG] Failed to create Razorpay order: ${response.status} ${response.statusText}`, errorText);
-      // Fall back to mock implementation for testing
-      console.log('[API DEBUG] Falling back to mock implementation for testing');
-      // Import the function directly
-      const { createTestRazorpayOrder } = await import('./razorpay');
-      return createTestRazorpayOrder(amount);
-    }
-
-    const data = await response.json();
-    console.log('[API DEBUG] Razorpay order created successfully:', data);
-    return data;
+    // In a production app, this would call your server API
+    // For now, we'll use our test implementation
+    // Convert to paise (Razorpay uses smallest currency unit)
+    const amountInPaise = Math.round(amount * 100);
+    
+    // In development/test mode: create a mock order
+    const order = {
+      id: `order_${Math.random().toString(36).substring(2, 15)}`,
+      amount: amountInPaise,
+      currency: "INR",
+      receipt: `rcpt_${Math.random().toString(36).substring(2, 10)}`,
+      status: "created"
+    };
+    
+    console.log("Created test Razorpay order:", order);
+    
+    return {
+      success: true,
+      message: "Order created successfully",
+      order
+    };
   } catch (error) {
-    console.error('[API DEBUG] Error creating Razorpay order:', error);
-    // Fall back to mock implementation for testing
-    console.log('[API DEBUG] Falling back to mock implementation for testing due to error');
-    // Import the function directly
-    const { createTestRazorpayOrder } = await import('./razorpay');
-    return createTestRazorpayOrder(amount);
+    console.error("Error creating Razorpay order:", error);
+    
+    // Return a structured error response
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to create order",
+      error
+    };
   }
 }
 
@@ -309,27 +311,17 @@ export async function verifyRazorpayPayment(paymentData: {
   razorpay_order_id: string;
   razorpay_signature: string;
 }) {
-  console.log("[API DEBUG] Verifying Razorpay payment:", paymentData);
-  console.log("[API DEBUG] Payment ID:", paymentData.razorpay_payment_id);
-  console.log("[API DEBUG] Order ID:", paymentData.razorpay_order_id);
-  console.log("[API DEBUG] Signature present:", !!paymentData.razorpay_signature);
+  console.log("Verifying Razorpay payment:", paymentData);
   
   try {
-    // In a production app, this would call your server API to verify the signature
-    // For testing purposes, we'll simulate a successful verification
-    
-    // Validate input data
-    if (!paymentData.razorpay_payment_id || !paymentData.razorpay_order_id || !paymentData.razorpay_signature) {
-      console.error("[API DEBUG] Missing required payment data");
-      throw new Error("Missing required payment data");
-    }
+    // In a production app, this would call your server API
+    // For now, we'll simulate a successful verification
     
     // Simulate API call delay
-    console.log("[API DEBUG] Simulating verification delay...");
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Create success response
-    const response = {
+    // Mock verification response
+    return {
       success: true,
       message: "Payment verified successfully",
       data: {
@@ -338,15 +330,8 @@ export async function verifyRazorpayPayment(paymentData: {
         timestamp: new Date().toISOString()
       }
     };
-    
-    console.log("[API DEBUG] Verification successful:", response);
-    return response;
   } catch (error) {
-    console.error("[API DEBUG] Verification error:", error);
-    if (error instanceof Error) {
-      console.error("[API DEBUG] Error message:", error.message);
-      console.error("[API DEBUG] Error stack:", error.stack);
-    }
+    console.error("Error verifying Razorpay payment:", error);
     
     // Return a structured error response
     return {
