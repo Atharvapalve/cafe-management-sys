@@ -68,6 +68,7 @@ interface DashboardMetrics {
   totalOrdersToday: number;
   totalClientsToday: number;
   averageOrderValue: number;
+  totalRevenueToday: number;
 }
 
 interface TrendingItem {
@@ -91,6 +92,7 @@ export function AdminDashboard() {
     totalOrdersToday: 0,
     totalClientsToday: 0,
     averageOrderValue: 0,
+    totalRevenueToday: 0,
   });
   const [orders, setOrders] = useState<Order[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -139,6 +141,7 @@ export function AdminDashboard() {
     let totalOrdersToday = 0;
     let totalClientsToday = 0;
     let averageOrderValue = 0;
+    let totalRevenueToday = 0;
     
     // Only calculate if we have order data
     if (orderData && orderData.length > 0) {
@@ -180,10 +183,12 @@ export function AdminDashboard() {
       }).filter(Boolean));
       totalClientsToday = uniqueClientIds.size;
       
-      // Average order value (revenue per ratio)
-      const totalRevenue = ordersToUse.reduce((sum, order) => sum + order.total, 0);
+      // Total revenue today
+      totalRevenueToday = ordersToUse.reduce((sum, order) => sum + order.total, 0);
+      
+      // Average order value 
       averageOrderValue = totalOrdersToday > 0 
-        ? parseFloat((totalRevenue / totalOrdersToday).toFixed(2)) 
+        ? parseFloat((totalRevenueToday / totalOrdersToday).toFixed(2)) 
         : 0;
     }
     
@@ -191,7 +196,8 @@ export function AdminDashboard() {
       totalMenuItems,
       totalOrdersToday,
       totalClientsToday,
-      averageOrderValue
+      averageOrderValue,
+      totalRevenueToday
     });
   };
 
@@ -490,8 +496,8 @@ export function AdminDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[#8D6E63] font-medium">Revenue Per Ratio</p>
-                <h3 className="text-3xl font-bold text-[#5D4037]">₹{metrics.averageOrderValue.toFixed(2)}</h3>
+                <p className="text-sm text-[#8D6E63] font-medium">Revenue Today</p>
+                <h3 className="text-3xl font-bold text-[#5D4037]">₹{metrics.totalRevenueToday.toFixed(2)}</h3>
               </div>
               <div className="bg-[#EFEBE9] p-3 rounded-full">
                 <DollarSign className="h-6 w-6 text-[#5D4037]" />

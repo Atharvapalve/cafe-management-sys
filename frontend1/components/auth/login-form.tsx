@@ -46,10 +46,12 @@ export function LoginForm() {
     e.preventDefault()
     setError("")
     try {
+      console.log("Login form submission:", { email, password, userType });
       await login(email, password, userType)
       router.push(userType === "admin" ? "/admin" : "/dashboard")
-    } catch (error) {
-      setError("Invalid email or password")
+    } catch (error: any) {
+      console.error("Login form error:", error);
+      setError(error.message || "Invalid email or password")
     }
   }
 
