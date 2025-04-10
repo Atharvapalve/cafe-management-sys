@@ -34,16 +34,17 @@ const AdminPage = () => {
   const usersRef = useRef<User[]>([]);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
-  const imageUrl = "https://images.unsplash.com/photo-1447933601403-0c6688de566e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1456&q=80&v=" + new Date().getTime();
+  // Use a fixed URL without dynamic time parameter to avoid hydration errors
+  const imageUrl = "https://images.unsplash.com/photo-1447933601403-0c6688de566e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1456&q=80";
 
   useEffect(() => {
-    // Preload the background image
+    // Preload the background image - only in client-side code
     const preloadImg = new Image();
     preloadImg.onload = () => {
       setIsImageLoaded(true);
     };
     preloadImg.src = imageUrl;
-  }, [imageUrl]);
+  }, []); // Remove imageUrl dependency since it's now static
 
   const fetchData = useCallback(async () => {
     let menuData: any = [];

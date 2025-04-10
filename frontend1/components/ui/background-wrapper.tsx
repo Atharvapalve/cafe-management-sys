@@ -16,26 +16,32 @@ export function BackgroundWrapper({ children }: BackgroundWrapperProps) {
   // Skip background for login and register pages
   const skipBackground = pathname === '/' || pathname === '/register'
   
-  // Direct access to a reliable Unsplash CDN URL with cache busting to prevent caching issues
-  const imageUrl = "https://images.unsplash.com/photo-1447933601403-0c6688de566e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1456&q=80&v=" + new Date().getTime()
+  // Use a fixed URL without dynamic time parameter to avoid hydration errors
+  const imageUrl = "https://images.unsplash.com/photo-1447933601403-0c6688de566e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1456&q=80"
   
+  // Only run client-side code in useEffect to avoid hydration mismatches
   useEffect(() => {
-    // Log current path for debugging
-    console.log("BackgroundWrapper - Current path:", pathname)
-    console.log("BackgroundWrapper - Skip background:", skipBackground)
-    console.log("BackgroundWrapper - Image URL:", imageUrl)
+    // Log current path for debugging - only on client side
+    if (process.env.NODE_ENV === 'development') {
+      console.log("BackgroundWrapper - Current path:", pathname)
+      console.log("BackgroundWrapper - Skip background:", skipBackground)
+    }
     
-    // Try manually preloading the image
+    // Try preloading the image - only on client side
     if (!skipBackground) {
       const preloadImg = new Image()
       preloadImg.onload = () => {
-        console.log("Background image preloaded successfully")
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Background image preloaded successfully")
+        }
         setIsImageLoaded(true)
         setLoadError(null)
       }
       preloadImg.onerror = (e) => {
         const errorMsg = "Failed to preload background image"
-        console.error(errorMsg, e)
+        if (process.env.NODE_ENV === 'development') {
+          console.error(errorMsg, e)
+        }
         setLoadError(errorMsg)
       }
       preloadImg.src = imageUrl
@@ -45,17 +51,21 @@ export function BackgroundWrapper({ children }: BackgroundWrapperProps) {
       // Cleanup function
       setIsImageLoaded(false)
     }
-  }, [pathname, skipBackground, imageUrl])
+  }, [pathname, skipBackground]) // Remove imageUrl from dependencies since it's now fixed
   
   const handleImageLoad = () => {
-    console.log("Background image loaded successfully in DOM")
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Background image loaded successfully in DOM")
+    }
     setIsImageLoaded(true)
     setLoadError(null)
   }
   
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const errorMsg = "Background image loading error in DOM"
-    console.error(errorMsg, e)
+    if (process.env.NODE_ENV === 'development') {
+      console.error(errorMsg, e)
+    }
     setLoadError(errorMsg)
   }
   

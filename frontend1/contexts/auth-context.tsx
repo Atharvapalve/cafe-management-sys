@@ -49,7 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string, userType: string) => {
     try {
-      console.log("Login attempt:", { email, userType });
+      // Use more subtle logging in production
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Login attempt:", { email, userType });
+      }
       
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: "POST",
@@ -58,43 +61,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
-      console.log("Login response status:", response.status);
+      // Use more subtle logging in production
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Login response status:", response.status);
+      }
       
       // Clone the response so we can log it and still use it
       const responseClone = response.clone();
       const responseText = await responseClone.text();
-      console.log("Raw response:", responseText);
+      
+      // Only log in development mode
+      if (process.env.NODE_ENV === 'development' && !response.ok) {
+        try {
+          const errorData = JSON.parse(responseText);
+          // Use info level log instead of error
+          console.info("Login response info:", errorData);
+        } catch (e) {
+          // Silent fail for parse errors
+        }
+      }
       
       if (!response.ok) {
         let errorData;
         try {
           errorData = JSON.parse(responseText);
         } catch (e) {
-          errorData = { message: "Failed to parse error response" };
+          errorData = { message: "Login failed. Please check your credentials." };
         }
-        console.error("Login error response:", errorData);
         throw new Error(errorData.message || "Login failed");
       }
 
       let data;
       try {
         data = JSON.parse(responseText);
-        console.log("Login success data:", { 
-          ...data, 
-          token: data.token ? "[REDACTED]" : "undefined",
-          user: data.user ? {
-            id: data.user.id,
-            role: data.user.role,
-            email: data.user.email
-          } : "undefined"
-        });
+        
+        // Only log in development mode
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Login success");
+        }
       } catch (e) {
-        console.error("Error parsing success response:", e);
-        throw new Error("Failed to parse login response");
+        throw new Error("Unable to process login response");
       }
       
       if (!data.token || !data.user) {
-        console.error("Malformed login response - missing token or user data");
         throw new Error("Invalid response from server");
       }
       
@@ -112,7 +121,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         router.push("/dashboard");
       }
     } catch (error) {
-      console.error("Login error:", error);
+      // Only log full errors in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Login error:", error);
+      }
       throw error;
     }
   };

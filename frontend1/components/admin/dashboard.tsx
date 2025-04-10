@@ -299,7 +299,7 @@ export function AdminDashboard() {
     if (period === 'weekly') {
       startDate.setDate(today.getDate() - 7);
     } else { // monthly
-      startDate.setMonth(today.getMonth() - 7);
+      startDate.setMonth(today.getMonth() - 5); // Show last 6 months
     }
     
     // Group orders by date
@@ -310,7 +310,7 @@ export function AdminDashboard() {
     while (currentDate <= today) {
       const dateKey = period === 'weekly' 
         ? format(currentDate, 'MM/dd') 
-        : format(currentDate, 'MMM');
+        : format(currentDate, 'MMM'); // Use short month format
       
       if (!revenueByDate[dateKey]) {
         revenueByDate[dateKey] = 0;
@@ -364,7 +364,7 @@ export function AdminDashboard() {
       startDate.setDate(today.getDate() - 6);
       dateFormat = 'MM/dd';
     } else { // monthly
-      startDate.setMonth(today.getMonth() - 5);
+      startDate.setMonth(today.getMonth() - 5); // Show last 6 months
     }
     
     // Group orders by date
