@@ -92,17 +92,26 @@ export default function Dashboard() {
       try {
         const response = await fetch(`${API_URL}/menu-items`);
         if (!response.ok) {
-          throw new Error("Failed to fetch menu items");
+          // Silent fail instead of throwing an error
+          if (process.env.NODE_ENV === 'development') {
+            console.log("Could not fetch menu items, status:", response.status);
+          }
+          return; // Early return instead of throwing
         }
         const data = await response.json();
-        console.log("Fetched menu items:", data);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Fetched menu items:", data.length);
+        }
         const mappedItems = data.map((item: any) => ({
           ...item,
           id: item._id, // Map '_id' to 'id'
         }));
         setMenuItems(mappedItems);
       } catch (error) {
-        console.error("Failed to fetch menu items:", error);
+        // Use info level log instead of error in production
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Menu items fetch issue:", error instanceof Error ? error.message : 'Unknown error');
+        }
       }
     }
     fetchMenuItems();
