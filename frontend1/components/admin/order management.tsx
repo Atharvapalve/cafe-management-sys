@@ -39,6 +39,20 @@ export function OrderManagement({ orders: initialOrders }: { orders: Order[] }) 
   // Keep track of the current stage for each order
   const [orderStages, setOrderStages] = useState<{ [orderId: string]: "pending" | "ready" | "done" }>({});
 
+  // Status color mapping
+  const statusColors = {
+    pending: "bg-yellow-500 text-white",
+    preparing: "bg-blue-500 text-white",
+    ready: "bg-emerald-500 text-white",
+    completed: "bg-purple-500 text-white",
+    "on the way": "bg-indigo-500 text-white"
+  };
+
+  // Get status color
+  const getStatusColor = (status: string) => {
+    return statusColors[status.toLowerCase()] || "bg-gray-500 text-white";
+  };
+
   // Update orders when initialOrders change (for example on first load)
   useEffect(() => {
     setOrders(initialOrders);
@@ -180,7 +194,11 @@ export function OrderManagement({ orders: initialOrders }: { orders: Order[] }) 
                         ))}
                       </TableCell>
                       <TableCell>₹{order.total.toFixed(2)}</TableCell>
-                      <TableCell>{order.status}</TableCell>
+                      <TableCell>
+                        <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
+                          {order.status}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         {(order.status === "pending" ||
                           order.status === "preparing") && (
@@ -189,6 +207,11 @@ export function OrderManagement({ orders: initialOrders }: { orders: Order[] }) 
                             disabled={
                               buttonDisabled || updatingOrder === order._id
                             }
+                            className={`${
+                              order.status.toLowerCase() === "pending"
+                                ? "bg-blue-500 hover:bg-blue-600"
+                                : "bg-emerald-500 hover:bg-emerald-600"
+                            } text-white`}
                           >
                             {updatingOrder === order._id
                               ? "Updating..."
@@ -197,7 +220,12 @@ export function OrderManagement({ orders: initialOrders }: { orders: Order[] }) 
                         )}
                         {(order.status !== "pending" &&
                           order.status !== "preparing") && (
-                          <Button disabled>{buttonLabel}</Button>
+                          <Button 
+                            disabled 
+                            className="bg-gray-400 text-white cursor-not-allowed opacity-50"
+                          >
+                            {buttonLabel}
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>
