@@ -297,28 +297,40 @@ export function AdminDashboard() {
     
     // Set start date based on period
     if (period === 'weekly') {
-      startDate.setDate(today.getDate() - 7);
-    } else { // monthly
-      startDate.setMonth(today.getMonth() - 5); // Show last 6 months
+      // For weekly view, show last 7 days
+      startDate = new Date(today);
+      startDate.setDate(today.getDate() - 6); // Start from 6 days ago to include today
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      // For monthly view, start from 6 months ago
+      startDate.setMonth(today.getMonth() - 5);
     }
     
     // Group orders by date
-    const revenueByDate: Record<string, number> = {};
+    const revenueByDate: Record<string, { revenue: number, monthNumber?: number, fullDate?: Date }> = {};
     
     // Initialize all dates in range
     let currentDate = new Date(startDate);
     while (currentDate <= today) {
-      const dateKey = period === 'weekly' 
-        ? format(currentDate, 'MM/dd') 
-        : format(currentDate, 'MMM'); // Use short month format
-      
-      if (!revenueByDate[dateKey]) {
-        revenueByDate[dateKey] = 0;
-      }
+      const dateKey = period === 'weekly'
+        ? format(currentDate, 'MM/dd') // Use MM/dd for weekly view
+        : format(currentDate, 'MMM'); // Use MMM for monthly view
       
       if (period === 'weekly') {
+        if (!revenueByDate[dateKey]) {
+          revenueByDate[dateKey] = { 
+            revenue: 0,
+            fullDate: new Date(currentDate) // Store full date for weekly sorting
+          };
+        }
         currentDate.setDate(currentDate.getDate() + 1);
       } else {
+        if (!revenueByDate[dateKey]) {
+          revenueByDate[dateKey] = { 
+            revenue: 0,
+            monthNumber: currentDate.getMonth()
+          };
+        }
         currentDate.setMonth(currentDate.getMonth() + 1);
       }
     }
@@ -328,27 +340,47 @@ export function AdminDashboard() {
       const orderDate = new Date(order.createdAt);
       
       if (orderDate >= startDate && orderDate <= today) {
-        const dateKey = period === 'weekly' 
-          ? format(orderDate, 'MM/dd') 
+        const dateKey = period === 'weekly'
+          ? format(orderDate, 'MM/dd')
           : format(orderDate, 'MMM');
         
-        revenueByDate[dateKey] = (revenueByDate[dateKey] || 0) + order.total;
+        if (dateKey in revenueByDate) {
+          revenueByDate[dateKey].revenue += order.total;
+        }
       }
     });
     
-    // Convert to array for chart
+    // Convert to array and sort
     const chartData = Object.entries(revenueByDate)
-      .map(([date, revenue]) => ({ date, revenue }))
+      .map(([date, data]) => ({
+        date,
+        revenue: data.revenue,
+        monthNumber: data.monthNumber,
+        fullDate: data.fullDate
+      }))
       .sort((a, b) => {
         if (period === 'weekly') {
-          const [aMonth, aDay] = a.date.split('/').map(Number);
-          const [bMonth, bDay] = b.date.split('/').map(Number);
-          return (aMonth * 100 + aDay) - (bMonth * 100 + bDay);
+          // Sort by actual dates for weekly view
+          return a.fullDate!.getTime() - b.fullDate!.getTime();
         } else {
-          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          return months.indexOf(a.date) - months.indexOf(b.date);
+          // Sort by month number with November as reference
+          const referenceMonth = 10; // November
+          let aMonth = a.monthNumber!;
+          let bMonth = b.monthNumber!;
+          
+          // If month is less than November, add 12 to make it next year
+          if (aMonth < referenceMonth) aMonth += 12;
+          if (bMonth < referenceMonth) bMonth += 12;
+          
+          return aMonth - bMonth;
         }
-      });
+      })
+      .map(({ date, revenue }) => ({
+        date: period === 'weekly' 
+          ? format(new Date(today.getFullYear(), parseInt(date.split('/')[0]) - 1, parseInt(date.split('/')[1])), 'EEE') // Show day names for weekly
+          : date,
+        revenue
+      }));
     
     setRevenueData(chartData);
   };
@@ -368,15 +400,16 @@ export function AdminDashboard() {
     }
     
     // Group orders by date
-    const countByDate: Record<string, { completed: number, pending: number }> = {};
+    const countByDate: Record<string, { completed: number, pending: number, monthNumber: number }> = {};
     
     // Initialize all dates in range
     let currentDate = new Date(startDate);
     while (currentDate <= today) {
-      const dateKey = format(currentDate, dateFormat);
+      const monthKey = format(currentDate, dateFormat);
+      const monthNumber = currentDate.getMonth();
       
-      if (!countByDate[dateKey]) {
-        countByDate[dateKey] = { completed: 0, pending: 0 };
+      if (!countByDate[monthKey]) {
+        countByDate[monthKey] = { completed: 0, pending: 0, monthNumber };
       }
       
       if (orderTimeFrame === 'Weekly') {
@@ -391,24 +424,25 @@ export function AdminDashboard() {
       const orderDate = new Date(order.createdAt);
       
       if (orderDate >= startDate && orderDate <= today) {
-        const dateKey = format(orderDate, dateFormat);
+        const monthKey = format(orderDate, dateFormat);
         
-        if (dateKey in countByDate) {
+        if (monthKey in countByDate) {
           if (order.status === 'Ready' || order.status === 'Completed') {
-            countByDate[dateKey].completed += 1;
+            countByDate[monthKey].completed += 1;
           } else {
-            countByDate[dateKey].pending += 1;
+            countByDate[monthKey].pending += 1;
           }
         }
       }
     });
     
-    // Convert to array for chart
+    // Convert to array and sort by actual month number
     return Object.entries(countByDate)
-      .map(([date, counts]) => ({ 
-        date, 
-        completed: counts.completed, 
-        pending: counts.pending 
+      .map(([date, data]) => ({
+        date,
+        completed: data.completed,
+        pending: data.pending,
+        monthNumber: data.monthNumber
       }))
       .sort((a, b) => {
         if (orderTimeFrame === 'Weekly') {
@@ -416,10 +450,21 @@ export function AdminDashboard() {
           const [bMonth, bDay] = b.date.split('/').map(Number);
           return (aMonth * 100 + aDay) - (bMonth * 100 + bDay);
         } else {
-          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          return months.indexOf(a.date) - months.indexOf(b.date);
+          // Get reference month (November)
+          const referenceMonth = 10; // 0-based month number for November
+          
+          // Adjust month numbers relative to November
+          let aMonth = a.monthNumber;
+          let bMonth = b.monthNumber;
+          
+          // If month is less than November, add 12 to make it next year
+          if (aMonth < referenceMonth) aMonth += 12;
+          if (bMonth < referenceMonth) bMonth += 12;
+          
+          return aMonth - bMonth;
         }
-      });
+      })
+      .map(({ date, completed, pending }) => ({ date, completed, pending }));
   };
 
   // Recent orders for the orders list
