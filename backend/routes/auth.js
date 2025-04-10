@@ -14,8 +14,7 @@ router.post(
     body("name").notEmpty().withMessage("Name is required"),
     body("email")
       .isEmail()
-      .withMessage("Please enter a valid email address")
-      .normalizeEmail(),
+      .withMessage("Please enter a valid email address"),
     body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters long"),
     body("phone").notEmpty().withMessage("Phone number is required")
       .matches(/^[0-9]{10}$/).withMessage("Phone must be a valid 10-digit number"),
@@ -28,24 +27,25 @@ router.post(
       }
       const { name, email, password, phone } = req.body;
 
-      // Check if the user already exists
-      let user = await User.findOne({ email });
+      // Check if the user already exists - case insensitive but preserving dots
+      let user = await User.findOne({ 
+        email: { 
+          $regex: new RegExp(`^${email.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') 
+        } 
+      });
+      
       if (user) {
         return res.status(400).json({ message: "User with this email already exists" });
       }
 
-      // No longer using external API to validate email - relying on built-in validation
-      // This allows users to register with any valid email format
+      // Create a new user with original email format
+      user = new User({ name, email, password, phone, role: "user" });
 
-      // Create a new user
-      user = new User({ name, email, password, phone, role : "user" });
-
-      // No need to hash password here as it's done in the User model's pre-save middleware
       await user.save();
 
       // Generate JWT token
       const token = jwt.sign(
-        { userId: user._id, role: user.role }, // Include the role
+        { userId: user._id, role: user.role },
         process.env.JWT_SECRET,
         { expiresIn: "7d" }
       );
