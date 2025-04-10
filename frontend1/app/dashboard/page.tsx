@@ -408,6 +408,20 @@ function OrderHistory() {
     fetchOrders();
   }, []);
 
+  const getStatusColor = (status: string) => {
+    type StatusType = 'pending' | 'preparing' | 'ready' | 'completed' | 'on the way';
+    
+    const statusColors: Record<StatusType, string> = {
+      pending: "bg-yellow-500 text-white",
+      preparing: "bg-blue-500 text-white",
+      ready: "bg-emerald-500 text-white",
+      completed: "bg-purple-500 text-white",
+      "on the way": "bg-indigo-500 text-white"
+    };
+    
+    return statusColors[status.toLowerCase() as StatusType] || "bg-gray-500 text-white";
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -435,7 +449,7 @@ function OrderHistory() {
               <CardTitle className="text-[#5D4037]">
                 Order #{order._id.slice(-6)}
               </CardTitle>
-              <span className="coffee-badge">
+              <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
                 {order.status}
               </span>
             </div>

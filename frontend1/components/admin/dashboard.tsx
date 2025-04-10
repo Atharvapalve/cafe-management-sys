@@ -36,6 +36,7 @@ import {
 } from 'recharts';
 import Image from "next/image";
 import { format } from "date-fns";
+import { toast } from "react-hot-toast";
 
 interface MenuItem {
   _id: string;
@@ -101,6 +102,7 @@ export function AdminDashboard() {
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
   const [timeFrame, setTimeFrame] = useState("Monthly");
   const [orderTimeFrame, setOrderTimeFrame] = useState("Monthly");
+  const [updatingOrder, setUpdatingOrder] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -473,11 +475,63 @@ export function AdminDashboard() {
     .slice(0, 5);
 
   const statusColors = {
-    pending: "bg-amber-100 text-amber-800",
-    preparing: "bg-blue-100 text-blue-800",
-    Ready: "bg-green-100 text-green-800",
-    Completed: "bg-purple-100 text-purple-800",
-    "On the Way": "bg-indigo-100 text-indigo-800"
+    pending: "bg-yellow-500 text-white",
+    preparing: "bg-blue-500 text-white",
+    Ready: "bg-emerald-500 text-white",
+    Completed: "bg-purple-500 text-white",
+    "On the Way": "bg-indigo-500 text-white"
+  };
+
+  const handleOrderUpdate = async (orderId: string, currentStatus: string) => {
+    try {
+      setUpdatingOrder(orderId);
+      let newStatus = '';
+      
+      // Determine next status
+      switch(currentStatus.toLowerCase()) {
+        case 'pending':
+          newStatus = 'preparing';
+          break;
+        case 'preparing':
+          newStatus = 'ready';
+          break;
+        case 'ready':
+          newStatus = 'completed';
+          break;
+        default:
+          return; // Don't update if already completed
+      }
+
+      // Update order in the backend
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update order status');
+      }
+
+      // Update order in state
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order._id === orderId 
+            ? { ...order, status: newStatus } 
+            : order
+        )
+      );
+
+      toast.success(`Order status updated to ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast.error('Failed to update order status');
+    } finally {
+      setUpdatingOrder(null);
+    }
   };
 
   return (
@@ -696,19 +750,7 @@ export function AdminDashboard() {
         <Card className="col-span-12 lg:col-span-8 bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-[#BCAAA4]">
           <CardContent className="p-4">
             <div className="flex justify-between items-center mb-4">
-              <CardTitle className="text-lg font-semibold text-[#5D4037]">Order List</CardTitle>
-              <div className="flex space-x-2">
-                {timeOptions.map(option => (
-                  <Button 
-                    key={option}
-                    variant="outline"
-                    className="text-[#5D4037] border-[#5D4037]"
-                    size="sm"
-                  >
-                    {option}
-                  </Button>
-                ))}
-              </div>
+              <CardTitle className="text-lg font-semibold text-[#5D4037]">Recent Orders</CardTitle>
             </div>
             
             <Table>
@@ -719,33 +761,31 @@ export function AdminDashboard() {
                   <TableHead className="text-[#5D4037]">Customer</TableHead>
                   <TableHead className="text-[#5D4037]">Amount</TableHead>
                   <TableHead className="text-[#5D4037]">Status</TableHead>
-                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentOrders.map(order => (
-                  <TableRow key={order._id} className="hover:bg-[#EFEBE9] border-b border-[#BCAAA4]">
-                    <TableCell className="font-medium text-[#5D4037]">#{order._id.substring(order._id.length - 6)}</TableCell>
-                    <TableCell className="text-[#8D6E63]">{format(new Date(order.createdAt), 'MMM d, yyyy')}</TableCell>
-                    <TableCell className="text-[#5D4037]">{order.user?.name || 'Guest'}</TableCell>
-                    <TableCell className="text-[#5D4037]">₹{order.total.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        order.status === 'pending' ? 'bg-[#EFEBE9] text-[#8D6E63]' :
-                        order.status === 'preparing' ? 'bg-[#D7CCC8] text-[#5D4037]' :
-                        order.status === 'Ready' ? 'bg-[#A1887F] text-white' :
-                        'bg-[#8D6E63] text-white'
-                      }`}>
-                        {order.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" className="text-[#5D4037] hover:text-[#8D6E63]">
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {orders
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .slice(0, 10)
+                  .map(order => (
+                    <TableRow key={order._id} className="hover:bg-[#EFEBE9] border-b border-[#BCAAA4]">
+                      <TableCell className="font-medium text-[#5D4037]">#{order._id.substring(order._id.length - 6)}</TableCell>
+                      <TableCell className="text-[#8D6E63]">{format(new Date(order.createdAt), 'MMM d, yyyy HH:mm')}</TableCell>
+                      <TableCell className="text-[#5D4037]">{order.user?.name || 'Guest'}</TableCell>
+                      <TableCell className="text-[#5D4037]">₹{order.total.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                          order.status.toLowerCase() === 'pending' ? 'bg-yellow-500 text-white' :
+                          order.status.toLowerCase() === 'preparing' ? 'bg-blue-500 text-white' :
+                          order.status.toLowerCase() === 'ready' ? 'bg-emerald-500 text-white' :
+                          order.status.toLowerCase() === 'completed' ? 'bg-purple-500 text-white' :
+                          'bg-indigo-500 text-white'
+                        }`}>
+                          {order.status}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </CardContent>
