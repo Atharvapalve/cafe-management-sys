@@ -3,6 +3,7 @@ import Order from "../models/Order.js";
 import User from "../models/User.js";
 import { auth } from "../middleware/auth.js";
 import MenuItem from "../models/MenuItem.js";
+import { sendOrderStatusSMS } from "../utils/smsService.js";  
 
 const router = express.Router();
 
@@ -11,26 +12,39 @@ router.put("/:orderId", auth, async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body;
-    const order = await Order.findById(orderId);
+
+    const order = await Order.findById(orderId).populate("user");
+
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
+
     order.status = status;
     await order.save();
 
-    // Retrieve the io instance from app locals and emit event
+    // Emit socket event
     const io = req.app.locals.io;
-    io.emit("orderStatusUpdated", { 
-      orderId, 
-      status, 
-      user: order.user.toString() // Ensure this is a string!
-    });    
+    io.emit("orderStatusUpdated", {
+      orderId,
+      status,
+      user: order.user._id.toString(),
+    });
+
+    // ✅ Trigger SMS here
+    if (order.user?.phone) {
+      console.log("📤 Triggering SMS for order:", order._id, "to:", order.user.phone);
+      await sendOrderStatusSMS(order.user.phone, status, order._id);
+    } else {
+      console.log("🚫 No phone number found for user:", order.user?._id);
+    }
+
     res.json({ message: "Order status updated", order });
   } catch (error) {
     console.error("Error updating order status:", error.message);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 // Create a new order
 router.post("/", auth, async (req, res) => {
@@ -150,5 +164,7 @@ router.get("/admin/orders", auth, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// Example in routes/order.js
+
 
 export default router;
