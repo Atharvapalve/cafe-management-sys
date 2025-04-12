@@ -3,13 +3,15 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { body, validationResult, check } from "express-validator";
 import User from "../models/User.js";
+import OTP from "../models/OTP.js";
 import { validate } from "../middleware/validate.js";
+import { sendOTPEmail, generateOTP } from "../utils/emailService.js";
 
 const router = express.Router();
 
-// Registration route
+// Step 1: Initial registration route - collect user data and send OTP
 router.post(
-  "/register",
+  "/register/init",
   validate([
     body("name").notEmpty().withMessage("Name is required"),
     body("email")
@@ -21,6 +23,7 @@ router.post(
   ]),
   async (req, res) => {
     try {
+      console.log("Received registration init data:", req.body);
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -28,54 +31,183 @@ router.post(
       const { name, email, password, phone } = req.body;
 
       // Check if the user already exists - case insensitive but preserving dots
-      let user = await User.findOne({ 
+      let existingUser = await User.findOne({ 
         email: { 
           $regex: new RegExp(`^${email.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') 
         } 
       });
       
-      if (user) {
+      if (existingUser) {
         return res.status(400).json({ message: "User with this email already exists" });
       }
 
-      // Create a new user with original email format
-      user = new User({ name, email, password, phone, role: "user" });
-
-      await user.save();
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { userId: user._id, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
-      );
+      // Generate and store OTP
+      const otp = generateOTP();
       
-      // Set cookie just like in login
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      // Delete any existing OTP for this email
+      await OTP.deleteMany({ email });
+      
+      // Create new OTP document
+      const otpDoc = new OTP({
+        email,
+        otp
       });
+      await otpDoc.save();
+      console.log("OTP saved")
 
-      // Return data in same format as login
-      const userData = {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        wallet: user.wallet || { balance: 0 }
-      };
+      // Send OTP email
+      const emailSent = await sendOTPEmail(email, otp);
+      if (!emailSent) {
+        return res.status(500).json({ message: "Failed to send verification email" });
+      }
 
-      console.log('Registration successful for:', email);
-      res.status(201).json({ token, user: userData });
+      // Store user data temporarily in session or return to client
+      // Here we're returning a temporary token that will be used to complete registration
+      const tempToken = jwt.sign(
+        { email, name, password, phone },
+        process.env.JWT_SECRET,
+        { expiresIn: "10m" }
+      );
+
+      res.status(200).json({ 
+        message: "Verification code sent to your email",
+        tempToken
+      });
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("Registration initialization error:", error);
       res.status(500).json({ message: "Server error" });
     }
   }
 );
+
+// Step 2: Verify OTP and complete registration
+router.post("/register/verify", async (req, res) => {
+  try {
+    const { otp, tempToken } = req.body;
+
+    if (!otp || !tempToken) {
+      return res.status(400).json({ message: "OTP and temporary token are required" });
+    }
+
+    // Verify and decode the temporary token
+    let decodedToken;
+    try {
+      decodedToken = jwt.verify(tempToken, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(400).json({ message: "Invalid or expired session" });
+    }
+
+    // Find the OTP document
+    const otpDoc = await OTP.findOne({ email: decodedToken.email });
+    if (!otpDoc) {
+      return res.status(400).json({ message: "OTP expired or not found" });
+    }
+
+    // Check attempts
+    if (otpDoc.attempts >= 3) {
+      await OTP.deleteOne({ _id: otpDoc._id });
+      return res.status(400).json({ message: "Too many attempts. Please request a new OTP" });
+    }
+
+    // Verify OTP
+    const isValid = await otpDoc.verifyOTP(otp);
+    if (!isValid) {
+      otpDoc.attempts += 1;
+      await otpDoc.save();
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    // Create the user
+    const user = new User({
+      name: decodedToken.name,
+      email: decodedToken.email,
+      password: decodedToken.password,
+      phone: decodedToken.phone,
+      role: "user",
+      emailVerified: true
+    });
+
+    await user.save();
+
+    // Delete the OTP document
+    await OTP.deleteOne({ _id: otpDoc._id });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+    
+    // Set cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    // Return user data
+    const userData = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      wallet: user.wallet || { balance: 0 }
+    };
+
+    res.status(201).json({ token, user: userData });
+  } catch (error) {
+    console.error("Registration verification error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Resend OTP
+router.post("/register/resend-otp", async (req, res) => {
+  try {
+    const { tempToken } = req.body;
+
+    if (!tempToken) {
+      return res.status(400).json({ message: "Temporary token is required" });
+    }
+
+    // Verify and decode the temporary token
+    let decodedToken;
+    try {
+      decodedToken = jwt.verify(tempToken, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(400).json({ message: "Invalid or expired session" });
+    }
+
+    // Generate new OTP
+    const otp = generateOTP();
+    
+    // Delete any existing OTP for this email
+    await OTP.deleteMany({ email: decodedToken.email });
+    
+    // Create new OTP document
+    const otpDoc = new OTP({
+      email: decodedToken.email,
+      otp
+    });
+    await otpDoc.save();
+
+    // Send OTP email
+    const emailSent = await sendOTPEmail(decodedToken.email, otp);
+    if (!emailSent) {
+      return res.status(500).json({ message: "Failed to send verification email" });
+    }
+
+    res.status(200).json({ 
+      message: "New verification code sent to your email"
+    });
+  } catch (error) {
+    console.error("OTP resend error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 // backend/routes/auth.js
 router.post('/login', [

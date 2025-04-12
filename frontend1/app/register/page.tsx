@@ -5,11 +5,15 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Coffee, User, Mail, Lock, Phone } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [error, setError] = useState("");
-  const [registered, setRegistered] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<"details" | "verification">("details");
+  const [otp, setOtp] = useState("");
+  const [tempToken, setTempToken] = useState("");
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const router = useRouter();
@@ -36,24 +40,88 @@ export default function RegisterPage() {
     console.error("Video loading error:", e);
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
+    
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register/init`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
 
+      const data = await res.json();
+      
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.message || "Registration failed");
       }
       
-      setRegistered(true);
+      setTempToken(data.tempToken);
+      setStep("verification");
+      toast.success("Verification code sent to your email");
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          otp,
+          tempToken
+        }),
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.message || "Verification failed");
+      }
+      
+      toast.success("Registration successful!");
+      router.push("/login");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setError("");
+    setIsLoading(true);
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register/resend-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tempToken
+        }),
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to resend code");
+      }
+      
+      toast.success("New verification code sent to your email");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -102,21 +170,8 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {registered ? (
-            <div className="text-center">
-              <div className="bg-[#5D4037]/10 text-[#5D4037] p-4 rounded-lg mb-6">
-                <p className="text-lg font-medium mb-2">Registration Successful!</p>
-                <p className="text-[#8D6E63]">Your account has been created.</p>
-              </div>
-              <Button 
-                onClick={() => router.push("/login")} 
-                className="coffee-button w-full py-3"
-              >
-                Continue to Login
-              </Button>
-            </div>
-          ) : (
-            <form onSubmit={handleRegister} className="space-y-6">
+          {step === "details" ? (
+            <form onSubmit={handleInitialSubmit} className="space-y-6">
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#8D6E63] w-5 h-5" />
                 <Input
@@ -167,8 +222,12 @@ export default function RegisterPage() {
                 />
               </div>
 
-              <Button type="submit" className="coffee-button w-full py-3">
-                Create Account
+              <Button 
+                type="submit" 
+                className="coffee-button w-full py-3"
+                disabled={isLoading}
+              >
+                {isLoading ? "Sending..." : "Continue"}
               </Button>
 
               <div className="text-center text-[#8D6E63] pt-4">
@@ -179,6 +238,48 @@ export default function RegisterPage() {
                   className="coffee-link font-medium"
                 >
                   Sign In
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOTP} className="space-y-6">
+              <div className="text-center mb-6">
+                <p className="text-[#5D4037] mb-2">
+                  Please enter the verification code sent to your email
+                </p>
+                <p className="text-[#8D6E63] text-sm">
+                  The code will expire in 10 minutes
+                </p>
+              </div>
+
+              <div className="relative">
+                <Input
+                  placeholder="Enter Verification Code"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  className="coffee-input text-center text-2xl tracking-[0.5em] font-mono"
+                  maxLength={6}
+                  required
+                />
+              </div>
+
+              <Button 
+                type="submit" 
+                className="coffee-button w-full py-3"
+                disabled={isLoading}
+              >
+                {isLoading ? "Verifying..." : "Verify Code"}
+              </Button>
+
+              <div className="text-center text-[#8D6E63] pt-4">
+                Didn't receive the code?{" "}
+                <Button
+                  variant="link"
+                  onClick={handleResendOTP}
+                  className="coffee-link font-medium"
+                  disabled={isLoading}
+                >
+                  Resend Code
                 </Button>
               </div>
             </form>
