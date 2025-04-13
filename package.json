@@ -2,14 +2,14 @@
   "name": "cafe-management-system",
   "version": "1.0.0",
   "description": "Cafe Management System with frontend and backend",
-  "scripts": {
-    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
-    "start:backend": "cd backend && npm start",
-    "start:frontend": "cd frontend1 && npm run dev",
-    "install": "concurrently \"npm run install:backend\" \"npm run install:frontend\"",
-    "install:backend": "cd backend && npm install",
-    "install:frontend": "cd frontend1 && npm install"
-  },
+"scripts": {
+  "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+  "start:backend": "cd backend && npm start",
+  "start:frontend": "cd frontend1 && npm run dev",
+  "install": "chmod +x node_modules/.bin/concurrently && concurrently \"npm run install:backend\" \"npm run install:frontend\"",
+  "install:backend": "cd backend && npm install",
+  "install:frontend": "cd frontend1 && npm install"
+},
   "devDependencies": {
     "concurrently": "^6.5.1"
   },
