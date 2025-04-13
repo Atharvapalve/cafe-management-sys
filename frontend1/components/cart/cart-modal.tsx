@@ -188,14 +188,7 @@ export function CartModal({
                       <Wallet className="h-4 w-4 mr-2" />
                       Wallet
                     </Button>
-                    <Button
-                      variant={paymentMethod === 'razorpay' ? 'default' : 'outline'}
-                      className={`flex-1 ${paymentMethod === 'razorpay' ? 'bg-[#5D4037] text-white' : 'border-[#8D6E63] text-[#5D4037]'}`}
-                      onClick={() => setPaymentMethod('razorpay')}
-                    >
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Card
-                    </Button>
+                    
                   </div>
                 </div>
                 
