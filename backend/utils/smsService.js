@@ -9,15 +9,15 @@ export const sendOrderStatusSMS = async (phoneNumber, status, orderId) => {
       const getMessageForStatus = (status) => {
         switch (status.toLowerCase()) {
           case "pending":
-            return `✅ Order #${orderId.slice(-6)} received!\nWe're getting everything ready for you at Café Delight.`;
+            return `✅ Order #${String(orderId).slice(-6)} received!\nWe're getting everything ready for you at Café Delight.`;
           case "preparing":
-            return `👨‍🍳 Order #${orderId.slice(-6)} is being prepared!\nYour delicious items are on the way.`;
+            return `👨‍🍳 Order #${String(orderId).slice(-6)} is being prepared!\nYour delicious items are on the way.`;
           case "ready":
-            return `📦 Order #${orderId.slice(-6)} is READY!\nPlease pick it up from the counter at Café Delight.\nThank you for visiting Café Delight. Hope to see you again soon!`;
+            return `📦 Order #${String(orderId).slice(-6)} is READY!\nPlease pick it up from the counter at Café Delight.\nThank you for visiting Café Delight. Hope to see you again soon!`;
           case "cancelled":
-            return `⚠️ Order #${orderId.slice(-6)} was cancelled.\nIf this was a mistake, feel free to reorder or contact us.`;
+            return `⚠️ Order #${String(orderId).slice(-6)} was cancelled.\nIf this was a mistake, feel free to reorder or contact us.`;
           default:
-            return `📢 Order #${orderId.slice(-6)} status updated: ${status.toUpperCase()}`;
+            return `📢 Order #${String(orderId).slice(-6)} status updated: ${status.toUpperCase()}`;
         }
       };
   
