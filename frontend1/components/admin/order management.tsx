@@ -41,19 +41,17 @@ export function OrderManagement({ orders: initialOrders }: { orders: Order[] }) 
 
   // Status color mapping
   const statusColors: { [key: string]: string } = {
-    pending: "...",
-    preparing: "...",
-    ready: "...",
-    completed: "...",
-    "on the way": "..."
+    pending: "bg-yellow-500 text-black",
+    preparing: "bg-orange-500 text-white",
+    ready: "bg-green-500 text-white",
+    completed: "bg-blue-500 text-white",
+    "on the way": "bg-indigo-500 text-white"
   };
   
-
-  // Get status color
   const getStatusColor = (status: string) => {
     return statusColors[status.toLowerCase()] || "bg-gray-500 text-white";
   };
-
+  
   // Update orders when initialOrders change (for example on first load)
   useEffect(() => {
     setOrders(initialOrders);
