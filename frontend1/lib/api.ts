@@ -193,8 +193,7 @@ export async function getOrders() {
 // Example of proper export
 export async function updateMenuItem(id: string, data: FormData) {
   console.log("Sending update request for:", id);
-  console.log("Request Body:",  Array.from(data.entries()));
-  const token = localStorage.getItem("token");
+  console.log("Request Body:", Array.from((data as any).entries()));  const token = localStorage.getItem("token");
   const res = await fetch(`${API_URL}/menu/${id}`, {
     method: "PUT",
     headers: buildHeaders(true, true), // Use buildHeaders function correctly
