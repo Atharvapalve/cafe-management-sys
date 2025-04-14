@@ -46,7 +46,7 @@ export function OrderManagement({ orders: initialOrders }: { orders: Order[] }) 
     ready: "bg-green-500 text-white",
     completed: "bg-blue-500 text-white",
     "on the way": "bg-indigo-500 text-white"
-  };
+  };  
   
   const getStatusColor = (status: string) => {
     return statusColors[status.toLowerCase()] || "bg-gray-500 text-white";
