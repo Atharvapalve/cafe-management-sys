@@ -40,13 +40,14 @@ export function OrderManagement({ orders: initialOrders }: { orders: Order[] }) 
   const [orderStages, setOrderStages] = useState<{ [orderId: string]: "pending" | "ready" | "done" }>({});
 
   // Status color mapping
-  const statusColors = {
-    pending: "bg-yellow-500 text-white",
-    preparing: "bg-blue-500 text-white",
-    ready: "bg-emerald-500 text-white",
-    completed: "bg-purple-500 text-white",
-    "on the way": "bg-indigo-500 text-white"
+  const statusColors: { [key: string]: string } = {
+    pending: "...",
+    preparing: "...",
+    ready: "...",
+    completed: "...",
+    "on the way": "..."
   };
+  
 
   // Get status color
   const getStatusColor = (status: string) => {
