@@ -46,11 +46,32 @@ export default function RegisterPage() {
     setIsLoading(true);
     
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register/init`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        throw new Error("API URL is not configured");
+      }
+
+      console.log("Sending registration request to:", `${apiUrl}/api/auth/register/init`);
+      
+      const res = await fetch(`${apiUrl}/api/auth/register/init`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        credentials: "include",
         body: JSON.stringify(form),
       });
+
+      console.log("Registration response status:", res.status);
+
+      // Check if the response is JSON
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        console.error("Non-JSON response:", text);
+        throw new Error("Server returned an invalid response");
+      }
 
       const data = await res.json();
       
@@ -62,7 +83,8 @@ export default function RegisterPage() {
       setStep("verification");
       toast.success("Verification code sent to your email");
     } catch (err: any) {
-      setError(err.message);
+      console.error("Registration error:", err);
+      setError(err.message || "Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
