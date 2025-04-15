@@ -20,9 +20,7 @@ function buildHeaders(tokenRequired = true, isFormData = false) {
 export async function login(email: string, password: string, userType: string) {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: buildHeaders(false),
     credentials: "include",
     body: JSON.stringify({ email, password, userType }),
   });
