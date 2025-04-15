@@ -51,9 +51,9 @@ export default function RegisterPage() {
         throw new Error("API URL is not configured");
       }
 
-      console.log("Sending registration request to:", `${apiUrl}/api/auth/register/init`);
+      console.log("Sending registration request to:", `${apiUrl}/auth/register/init`);
       
-      const res = await fetch(`${apiUrl}/api/auth/register/init`, {
+      const res = await fetch(`${apiUrl}/auth/register/init`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
