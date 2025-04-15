@@ -18,8 +18,10 @@ app.use("/uploads", express.static("uploads"));
 // Express CORS middleware (for your REST API)
 app.use(
   cors({
-    origin: [process.env.FRONTEND_URL, "http://localhost:3000"],
+    origin: ["https://cafe-management-sys-qqua.vercel.app", "http://localhost:3000"],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 app.use(express.json());
@@ -36,9 +38,10 @@ const server = http.createServer(app);
 // Initialize Socket.IO with updated CORS options:
 const io = new Server(server, {
   cors: {
-    origin: [process.env.FRONTEND_URL, "http://localhost:3000"],
+    origin: ["https://cafe-management-sys-qqua.vercel.app", "http://localhost:3000"],
     methods: ["GET", "POST", "PUT"],
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
   },
 });
 
