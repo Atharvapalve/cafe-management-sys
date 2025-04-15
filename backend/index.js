@@ -18,7 +18,7 @@ app.use("/uploads", express.static("uploads"));
 // Express CORS middleware (for your REST API)
 app.use(
   cors({
-    origin: "https://cafe-management-sys-qqua-eo9sfbyf8-atharvapalves-projects.vercel.app",
+    origin: "https://cafe-management-sys-qqua.vercel.app",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
@@ -30,7 +30,7 @@ app.use(
 // Add headers middleware
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Origin', 'https://cafe-management-sys-qqua-eo9sfbyf8-atharvapalves-projects.vercel.app');
+  res.header('Access-Control-Allow-Origin', 'https://cafe-management-sys-qqua.vercel.app');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   next();
@@ -50,7 +50,7 @@ const server = http.createServer(app);
 // Initialize Socket.IO with updated CORS options:
 const io = new Server(server, {
   cors: {
-    origin: "https://cafe-management-sys-qqua-eo9sfbyf8-atharvapalves-projects.vercel.app",
+    origin: "https://cafe-management-sys-qqua.vercel.app",
     methods: ["GET", "POST", "PUT"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
