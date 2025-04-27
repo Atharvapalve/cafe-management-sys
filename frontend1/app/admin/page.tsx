@@ -5,12 +5,13 @@ import React from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getMenuItems, getUsers, getAdminOrders } from "@/lib/api";
+import { getMenuItems, getUsers, getAdminOrders, updateOrderStatus, getFilteredOrders } from "@/lib/api";
 import { MenuManagement } from "@/components/admin/menu management";
 import { UserManagement } from "@/components/admin/user management";
 import { OrderManagement } from "@/components/admin/order management";
 import { AdminDashboard } from "@/components/admin/dashboard";
 import { Playfair_Display } from "next/font/google";
+import { format } from "date-fns";
 
 const playfair = Playfair_Display({ 
   subsets: ['latin'],
@@ -33,6 +34,12 @@ const AdminPage = () => {
   const [orders, setOrders] = useState([]);
   const usersRef = useRef<User[]>([]);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [totalSales, setTotalSales] = useState(0);
+  const [orderCount, setOrderCount] = useState(0);
 
   // Use a fixed URL without dynamic time parameter to avoid hydration errors
   const imageUrl = "https://images.unsplash.com/photo-1447933601403-0c6688de566e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1456&q=80";
@@ -85,6 +92,59 @@ const AdminPage = () => {
       setUsers([...usersRef.current]);
     }
   }, [users]);
+
+  useEffect(() => {
+    if (user?.role === "admin") {
+      fetchOrders();
+    }
+  }, [user]);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const data = await getAdminOrders();
+      setOrders(data);
+      calculateTotalSales(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFilter = async () => {
+    if (!startDate || !endDate) {
+      setError("Please select both start and end dates");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await getFilteredOrders(startDate, endDate);
+      setOrders(data.orders);
+      setTotalSales(data.totalSales);
+      setOrderCount(data.orderCount);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateTotalSales = (orders) => {
+    const total = orders.reduce((sum, order) => sum + order.total, 0);
+    setTotalSales(total);
+    setOrderCount(orders.length);
+  };
+
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      fetchOrders();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   if (isLoading) {
     return (

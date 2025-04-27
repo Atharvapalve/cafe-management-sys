@@ -164,7 +164,85 @@ router.get("/admin/orders", auth, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-// Example in routes/order.js
 
+// Example in routes/order.js
+// Add this at the end of the file, before export default router
+router.get("/test-sms", async (req, res) => {
+  try {
+    const testPhone = req.query.phone || "919876543210"; // Default test number
+    const testStatus = req.query.status || "pending";    // Default status
+    const testOrderId = req.query.orderId || "test123";  // Default order ID
+
+    console.log("📱 Testing SMS with:", {
+      phone: testPhone,
+      status: testStatus,
+      orderId: testOrderId
+    });
+
+    const result = await sendOrderStatusSMS(testPhone, testStatus, testOrderId);
+    
+    res.json({ 
+      success: result,
+      details: {
+        phone: testPhone,
+        status: testStatus,
+        orderId: testOrderId
+      }
+    });
+  } catch (error) {
+    console.error("❌ Test SMS Error:", error);
+    res.status(500).json({ 
+      error: error.message,
+      details: error
+    });
+  }
+});
+
+// Get filtered orders by date range
+router.get("/filter", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admins only." });
+    }
+
+    const { startDate, endDate } = req.query;
+
+    // Validate dates
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "Start date and end date are required" });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Include the entire end date
+
+    // Get filtered orders
+    const orders = await Order.find({
+      createdAt: {
+        $gte: start,
+        $lte: end
+      }
+    })
+    .sort({ createdAt: -1 })
+    .populate("items.menuItem", "name price")
+    .populate("user", "name email");
+
+    // Calculate total sales
+    const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
+
+    res.json({
+      orders,
+      totalSales,
+      orderCount: orders.length,
+      dateRange: {
+        start: start.toISOString(),
+        end: end.toISOString()
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching filtered orders:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 export default router;

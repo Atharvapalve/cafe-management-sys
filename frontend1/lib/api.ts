@@ -343,3 +343,26 @@ export async function verifyRazorpayPayment(paymentData: {
 }
 
 // End of Razorpay API functions
+
+export const getFilteredOrders = async (startDate: string, endDate: string) => {
+  try {
+    const response = await fetch(
+      `${API_URL}/orders/filter?startDate=${startDate}&endDate=${endDate}`,
+      {
+        method: "GET",
+        credentials: "include",
+        headers: buildHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch filtered orders");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching filtered orders:", error);
+    throw error;
+  }
+};
